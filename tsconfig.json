@@ -1,0 +1,19 @@
+{
+    "compilerOptions": {
+        "target": "es6",
+        "module": "commonjs",
+        "sourceMap": true,
+        "outDir": "dist",
+        "moduleResolution": "node", // Tell tsc to look in node_modules for modules
+        "jsx": "react", // Causes inline XML (JSX code) to be expanded
+        "strict": true, // Strict types, eg. prohibits `var x=0; x=null`
+        "alwaysStrict": true
+    },
+    "include": [
+        "**/*.ts",
+        "**/*.tsx"
+    ],
+    "exclude": [
+        "node_modules"
+    ]
+}
