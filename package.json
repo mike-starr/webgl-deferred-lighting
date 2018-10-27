@@ -5,8 +5,10 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "webpack --progress --colors",
-    "build:server": "webpack-dev-server"
+    "build": "webpack --progress --mode=development",
+    "build:server": "cp testpage/* dist/ && webpack-dev-server --mode=development",
+    "build:release": "webpack --progress --mode=production",
+    "clean": "rm -rf dist/*"
   },
   "repository": {
     "type": "git",
