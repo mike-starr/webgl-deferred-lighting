@@ -40,3 +40,6 @@ Temporary Items
 
 # Exclude build directory
 dist/*
+
+# Exclude node_modules
+node_modules/*
