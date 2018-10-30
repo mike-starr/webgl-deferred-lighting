@@ -6,8 +6,8 @@
         "outDir": "dist",
         "moduleResolution": "node", // Tell tsc to look in node_modules for modules
         "jsx": "react", // Causes inline XML (JSX code) to be expanded
+        "alwaysStrict": true,
         "strict": true, // Strict types, eg. prohibits `var x=0; x=null`
-        "alwaysStrict": true
     },
     "include": [
         "**/*.ts",
