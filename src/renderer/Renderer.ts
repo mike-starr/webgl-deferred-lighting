@@ -21,7 +21,7 @@ export default class Renderer {
             gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
         }`;
 
-    constructor(private readonly element: HTMLCanvasElement) {
+    constructor(element: HTMLCanvasElement) {
         const gl = element.getContext('webgl2');
 
         if (gl) {
@@ -78,8 +78,6 @@ export default class Renderer {
         const zNear = 0.1;
         const zFar = 100.0;
 
-
-        // get GL matrix library!
         const projectionMatrix = mat4.create();
 
         // note: glmatrix.js always has the first argument
