@@ -1,6 +1,8 @@
 import { mat4 } from "gl-matrix";
+import SceneGraphVisitor from "../scenegraph/SceneGraphVisitor";
+import SceneGraphNode from "../scenegraph/SceneGraphNode";
 
-export default class Renderer {
+export default class Renderer implements SceneGraphVisitor {
 
     private gl: WebGL2RenderingContext;
     private shaderProgramInfo: any;
@@ -50,21 +52,45 @@ export default class Renderer {
         this.positionBuffer = this.initBuffers();
     }
 
-    render() {
+    render(sceneGraphRoot: SceneGraphNode) {
         if (!this.gl) {
             return;
         }
+
+        this.drawScene(sceneGraphRoot);
+    }
+
+    pushProjectionViewMatrix(projectionViewMatrix: mat4): void {
+
+    }
+
+    popProjectionViewMatrix(): void {
+
+    }
+
+    pushWorldMatrix(worldMatrix: mat4): void {
+
+    }
+
+    popWorldMatrix(): void {
+
+    }
+
+    renderMesh(): void {
+
+    }
+
+    private drawScene(sceneGraphRoot: SceneGraphNode) {
+
 
         this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
         this.gl.clearDepth(1.0);
         this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
 
-        this.drawScene();
-    }
-
-    private drawScene() {
         this.gl.enable(this.gl.DEPTH_TEST);           // Enable depth testing
         this.gl.depthFunc(this.gl.LEQUAL);            // Near things obscure far things
+
+        sceneGraphRoot.accept(this);
 
         // Create a perspective matrix, a special matrix that is
         // used to simulate the distortion of perspective in a camera.

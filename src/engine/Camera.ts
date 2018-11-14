@@ -9,6 +9,7 @@ export default class Camera {
 
     private viewMatrix: mat4;
     private projectionMatrix: mat4;
+    private _projectionViewMatrix: mat4;
 
     constructor() {
         this.projectionMatrix = mat4.create();
@@ -21,10 +22,15 @@ export default class Camera {
 
         this.viewMatrix = mat4.create();
 
+        this._projectionViewMatrix = mat4.create();
+        this.updateProjectionView();
     }
 
-    getViewProjectionMatrix(out: mat4): void {
-        mat4.mul(out, this.projectionMatrix, this.viewMatrix);
+    public get projectionViewMatrix(): mat4 {
+        return this._projectionViewMatrix;
     }
 
+    private updateProjectionView() {
+        mat4.mul(this._projectionViewMatrix, this.projectionMatrix, this.viewMatrix);
+    }
 }
