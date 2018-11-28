@@ -1,12 +1,16 @@
 import { mat4 } from "gl-matrix";
 import SceneGraphVisitor from "../scenegraph/SceneGraphVisitor";
 import SceneGraphNode from "../scenegraph/SceneGraphNode";
+import ShaderMaker from "../engine/ShaderMaker";
+import ShaderDescription, { AttributeName, UniformName } from "../engine/ShaderDescription";
+import ShaderProgram from "../engine/ShaderProgram";
 
 export default class Renderer implements SceneGraphVisitor {
 
     private gl: WebGL2RenderingContext;
     private shaderProgramInfo: any;
     private positionBuffer: any;
+    private shaderMaker = new ShaderMaker();
 
     private readonly vsSource = `
         attribute vec4 aVertexPosition;
@@ -50,6 +54,30 @@ export default class Renderer implements SceneGraphVisitor {
         };
 
         this.positionBuffer = this.initBuffers();
+        this.loadShaders();
+    }
+
+    loadShaders(): void {
+
+        const vsSource = `
+            attribute vec4 aVertexPosition;
+
+            uniform mat4 uWorldMatrix;
+            uniform mat4 uProjectionViewMatrix;
+
+            void main() {
+                gl_Position = uProjectionViewMatrix * uWorldMatrix * aVertexPosition;
+            }`;
+
+        const fsSource = `
+            void main() {
+                gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+            }`;
+
+        const attributes = [AttributeName.VertexPosition];
+        const uniforms = [UniformName.ProjectionViewMatrix, UniformName.WorldMatrix];
+        // tie to the mesh with some global cache
+        this.shaderMaker.makeShaderProgram(this.gl, vsSource, fsSource, attributes, uniforms);
     }
 
     render(sceneGraphRoot: SceneGraphNode) {
@@ -76,13 +104,15 @@ export default class Renderer implements SceneGraphVisitor {
 
     }
 
+    setShaderProgram(shaderProgram: ShaderProgram): void {
+
+    }
+
     renderMesh(): void {
 
     }
 
     private drawScene(sceneGraphRoot: SceneGraphNode) {
-
-
         this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
         this.gl.clearDepth(1.0);
         this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
@@ -109,10 +139,10 @@ export default class Renderer implements SceneGraphVisitor {
         // note: glmatrix.js always has the first argument
         // as the destination to receive the result.
         mat4.perspective(projectionMatrix,
-                         fieldOfView,
-                         aspect,
-                         zNear,
-                         zFar);
+            fieldOfView,
+            aspect,
+            zNear,
+            zFar);
 
         // Set the drawing position to the "identity" point, which is
         // the center of the scene.
@@ -122,28 +152,28 @@ export default class Renderer implements SceneGraphVisitor {
         // start drawing the square.
 
         mat4.translate(modelViewMatrix,     // destination matrix
-                       modelViewMatrix,     // matrix to translate
-                       [-0.0, 0.0, -6.0]);  // amount to translate
+            modelViewMatrix,     // matrix to translate
+            [-0.0, 0.0, -6.0]);  // amount to translate
 
         // Tell WebGL how to pull out the positions from the position
         // buffer into the vertexPosition attribute.
         {
-          const numComponents = 2;  // pull out 2 values per iteration
-          const type = this.gl.FLOAT;    // the data in the buffer is 32bit floats
-          const normalize = false;  // don't normalize
-          const stride = 0;         // how many bytes to get from one set of values to the next
-                                    // 0 = use type and numComponents above
-          const offset = 0;         // how many bytes inside the buffer to start from
-          this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.positionBuffer);
-          this.gl.vertexAttribPointer(
-              this.shaderProgramInfo.attribLocations.vertexPosition,
-              numComponents,
-              type,
-              normalize,
-              stride,
-              offset);
-          this.gl.enableVertexAttribArray(
-            this.shaderProgramInfo.attribLocations.vertexPosition);
+            const numComponents = 2;  // pull out 2 values per iteration
+            const type = this.gl.FLOAT;    // the data in the buffer is 32bit floats
+            const normalize = false;  // don't normalize
+            const stride = 0;         // how many bytes to get from one set of values to the next
+            // 0 = use type and numComponents above
+            const offset = 0;         // how many bytes inside the buffer to start from
+            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.positionBuffer);
+            this.gl.vertexAttribPointer(
+                this.shaderProgramInfo.attribLocations.vertexPosition,
+                numComponents,
+                type,
+                normalize,
+                stride,
+                offset);
+            this.gl.enableVertexAttribArray(
+                this.shaderProgramInfo.attribLocations.vertexPosition);
         }
 
         // Tell WebGL to use our program when drawing
@@ -162,11 +192,11 @@ export default class Renderer implements SceneGraphVisitor {
             modelViewMatrix);
 
         {
-          const offset = 0;
-          const vertexCount = 4;
-          this.gl.drawArrays(this.gl.TRIANGLE_STRIP, offset, vertexCount);
+            const offset = 0;
+            const vertexCount = 4;
+            this.gl.drawArrays(this.gl.TRIANGLE_STRIP, offset, vertexCount);
         }
-      }
+    }
 
 
     private initBuffers(): WebGLBuffer | null {
@@ -229,12 +259,6 @@ export default class Renderer implements SceneGraphVisitor {
         return shaderProgram;
     }
 
-
-
-    //
-    // creates a shader of the given type, uploads the source and
-    // compiles it.
-    //
     private loadShader(type: number, source: string): WebGLShader | null {
         const shader = this.gl.createShader(type);
 
@@ -242,13 +266,9 @@ export default class Renderer implements SceneGraphVisitor {
             return null;
         }
 
-        // Send the source to the shader object
         this.gl.shaderSource(shader, source);
-
-        // Compile the shader program
         this.gl.compileShader(shader);
 
-        // See if it compiled successfully
         if (!this.gl.getShaderParameter(shader, this.gl.COMPILE_STATUS)) {
             console.error('An error occurred compiling the shaders: ' + this.gl.getShaderInfoLog(shader));
             this.gl.deleteShader(shader);

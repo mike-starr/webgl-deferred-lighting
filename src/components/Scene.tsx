@@ -15,6 +15,7 @@ export default class Scene extends React.Component<{}, {}> {
 
     constructor(props: any) {
         super(props);
+        this.loadResources();
         this.sceneGraphRoot = this.createScene();
     }
 
@@ -53,5 +54,11 @@ export default class Scene extends React.Component<{}, {}> {
     private createScene(): SceneGraphNode {
         const cameraNode = new SceneGraphCameraNode(new Camera());
         return new SceneGraphTransformNode(mat4.create(), [cameraNode]);
+
+        // load shaders
+    }
+
+    private loadResources() {
+
     }
 }
