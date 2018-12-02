@@ -3,7 +3,6 @@ import { AttributeName, UniformName, default as ShaderDescription, AttributeDesc
 
 export default class ShaderMaker {
 
-    // take in shader description, figure out what that looks like.
     makeShaderProgram(gl: WebGL2RenderingContext,
         vertexShaderSource: string,
         fragmentShaderSource: string,

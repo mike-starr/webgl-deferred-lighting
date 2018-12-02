@@ -9,10 +9,12 @@ export default class SceneGraphShaderProgramNode extends SceneGraphNode {
     }
 
     accept(visitor: SceneGraphVisitor): void {
-        visitor.setShaderProgram(this.shaderProgram);
+        visitor.pushShaderProgram(this.shaderProgram);
 
         for (const child of this.children) {
             child.accept(visitor);
         }
+
+        visitor.popShaderProgram();
     }
 }
