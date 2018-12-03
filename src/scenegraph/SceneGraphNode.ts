@@ -1,9 +1,13 @@
 import SceneGraphVisitor from "./SceneGraphVisitor"
 
-export default abstract class SceneGraphNode {
+export default class SceneGraphNode {
 
     constructor(protected readonly children: SceneGraphNode[]) {
     }
 
-    abstract accept(visitor: SceneGraphVisitor): void;
+    accept(visitor: SceneGraphVisitor): void {
+        for (const child of this.children) {
+            child.accept(visitor);
+        }
+    }
 };

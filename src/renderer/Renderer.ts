@@ -47,6 +47,11 @@ export default class Renderer implements SceneGraphVisitor {
         this.shaderProgramStack.pop();
     }
 
+    bindTexture(texture: WebGLTexture, index: GLenum): void {
+        this.gl.activeTexture(index);
+        this.gl.bindTexture(this.gl.TEXTURE_2D, texture);
+    }
+
     renderMesh(mesh: Mesh): void {
         const currentShader = this.shaderProgramStack[this.shaderProgramStack.length - 1];
         this.gl.useProgram(currentShader.program);
@@ -79,6 +84,10 @@ export default class Renderer implements SceneGraphVisitor {
                     this.gl.uniformMatrix4fv(uniform.location,
                         false,
                         this.worldMatrixStack[this.worldMatrixStack.length - 1]);
+                    break;
+
+                case UniformName.TextureSampler0:
+                    this.gl.uniform1i(uniform.location, 0);
                     break;
 
                 default:

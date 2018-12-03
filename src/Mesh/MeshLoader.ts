@@ -4,6 +4,80 @@ import Mesh from "./Mesh";
 
 export default class MeshLoader {
 
+    loadTexturedQuad(gl: WebGL2RenderingContext /*, the texture */) {
+        const positionBuffer = gl.createBuffer();
+        const texCoordBuffer = gl.createBuffer();
+        const elementBuffer = gl.createBuffer();
+
+        if (!(positionBuffer && elementBuffer && texCoordBuffer)) {
+            throw new Error("Unable to create buffer.");
+        }
+
+        const vertices = [
+            -0.5, -0.5, 0.0,
+            -0.5, 0.5, 0.0,
+            0.5, 0.5, 0.0,
+            0.5, -0.5, 0.0
+        ];
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+
+        const texCoords = [
+            0.0, 0.0,
+            0.0, 1.0,
+            1.0, 1.0,
+            1.0, 0.0,
+        ];
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(texCoords), gl.STATIC_DRAW);
+
+        const indices = [
+            0, 3, 2,
+            2, 1, 0,
+        ];
+
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, elementBuffer);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+
+        const vertexAttributeMap = new Map<AttributeName, MeshVertexAttribute>();
+
+        const vertexPositionAttribute = {
+            name: AttributeName.VertexPosition,
+            buffer: positionBuffer,
+            componentCount: 3,
+            type: gl.FLOAT,
+            normalized: false,
+            stride: 0,
+            offset: 0
+        };
+
+        vertexAttributeMap.set(AttributeName.VertexPosition, vertexPositionAttribute);
+
+        const texCoordAttribute = {
+            name: AttributeName.TexCoord0,
+            buffer: texCoordBuffer,
+            componentCount: 2,
+            type: gl.FLOAT,
+            normalized: false,
+            stride: 0,
+            offset: 0
+        };
+
+        vertexAttributeMap.set(AttributeName.TexCoord0, texCoordAttribute);
+
+        return {
+            vertexAttributeMap: vertexAttributeMap,
+            indexBufferDescription: {
+                buffer: elementBuffer,
+                vertexCount: 6,
+                type: gl.UNSIGNED_SHORT,
+                offset: 0
+            }
+        };
+    }
+
     loadCube(gl: WebGL2RenderingContext, halfExtent: number): Mesh {
         const positionBuffer = gl.createBuffer();
         const colorBuffer = gl.createBuffer();

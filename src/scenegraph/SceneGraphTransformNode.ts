@@ -11,9 +11,7 @@ export default class SceneGraphTransformNode extends SceneGraphNode {
     accept(visitor: SceneGraphVisitor): void {
         visitor.pushWorldMatrix(this.transform);
 
-        for (const child of this.children) {
-            child.accept(visitor);
-        }
+        super.accept(visitor);
 
         visitor.popWorldMatrix();
     }

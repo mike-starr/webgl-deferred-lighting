@@ -11,9 +11,7 @@ export default class SceneGraphCameraNode extends SceneGraphNode {
     accept(visitor: SceneGraphVisitor): void {
         visitor.pushProjectionViewMatrix(this.camera.projectionViewMatrix);
 
-        for (const child of this.children) {
-            child.accept(visitor);
-        }
+        super.accept(visitor);
 
         visitor.popProjectionViewMatrix();
     }

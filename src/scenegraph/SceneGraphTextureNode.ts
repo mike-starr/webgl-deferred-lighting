@@ -1,15 +1,16 @@
 import SceneGraphNode from "./SceneGraphNode";
 import SceneGraphVisitor from "./SceneGraphVisitor";
-import Mesh from "../Mesh/Mesh";
 
 export default class SceneGraphMeshNode extends SceneGraphNode {
 
-    constructor(private readonly mesh: Mesh, children: SceneGraphNode[] = []) {
+    constructor(private readonly texture: WebGLTexture,
+        private readonly textureIndex: GLenum,
+        children: SceneGraphNode[] = []) {
         super(children);
     }
 
     accept(visitor: SceneGraphVisitor): void {
-        visitor.renderMesh(this.mesh);
+        visitor.bindTexture(this.texture, this.textureIndex);
 
         super.accept(visitor);
     }

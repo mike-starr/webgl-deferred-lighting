@@ -9,5 +9,6 @@ export default interface SceneGraphVisitor {
     popWorldMatrix(): void;
     pushShaderProgram(shaderProgram: ShaderProgram): void;
     popShaderProgram(): void;
+    bindTexture(texture: WebGLTexture, index: number): void;
     renderMesh(mesh: Mesh): void;
 }

@@ -1,6 +1,7 @@
 export enum AttributeName {
     VertexPosition = "aVertexPosition",
-    VertexColor = "aVertexColor"
+    VertexColor = "aVertexColor",
+    TexCoord0 = "aTexCoord0"
 };
 
 export interface AttributeDescription {
@@ -10,7 +11,8 @@ export interface AttributeDescription {
 
 export enum UniformName {
     ProjectionViewMatrix = "uProjectionViewMatrix",
-    WorldMatrix = "uWorldMatrix"
+    WorldMatrix = "uWorldMatrix",
+    TextureSampler0 = "uTextureSampler0"
 };
 
 export interface UniformDescription {
