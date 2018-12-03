@@ -19,6 +19,8 @@ export default class Scene extends React.Component<{}, {}> {
     private sceneGraphRoot: SceneGraphNode | null = null;
     private meshLoader: MeshLoader = new MeshLoader();
     private shaderMaker: ShaderMaker = new ShaderMaker();
+    private cubeWorldTransform: mat4 = mat4.create();
+    private lastFrameTime: DOMHighResTimeStamp = 0;
 
     constructor(props: any) {
         super(props);
@@ -42,7 +44,7 @@ export default class Scene extends React.Component<{}, {}> {
     }
 
     start() {
-        this.frameId = window.requestAnimationFrame(() => this.onAnimationFrame());
+        this.frameId = window.requestAnimationFrame((time) => this.onAnimationFrame(time));
     }
 
     stop() {
@@ -51,9 +53,21 @@ export default class Scene extends React.Component<{}, {}> {
         }
     }
 
-    onAnimationFrame() {
+    onAnimationFrame(time: DOMHighResTimeStamp) {
+        let frameTime = (1 / 60) * 1000;
+
+        if (this.lastFrameTime > 0) {
+            frameTime = time - this.lastFrameTime;
+        }
+
+        this.lastFrameTime = time;
+
+        mat4.rotateX(this.cubeWorldTransform, this.cubeWorldTransform, (Math.PI / 7000) * frameTime);
+        mat4.rotateY(this.cubeWorldTransform, this.cubeWorldTransform, (Math.PI / 3000) * frameTime);
+        mat4.rotateZ(this.cubeWorldTransform, this.cubeWorldTransform, (Math.PI / 13000) * frameTime);
+
         this.renderScene();
-        this.frameId = requestAnimationFrame(() => this.onAnimationFrame());
+        this.frameId = requestAnimationFrame((time) => this.onAnimationFrame(time));
     }
 
     renderScene() {
@@ -69,9 +83,8 @@ export default class Scene extends React.Component<{}, {}> {
 
         const shaderNode = new SceneGraphShaderProgramNode(this.makeDefaultShader(gl), [meshNode]);
 
-        const worldTransform = mat4.create();
-        mat4.translate(worldTransform, worldTransform, [0.0, 0.0, -10.0]);
-        const worldTransformNode = new SceneGraphTransformNode(worldTransform, [shaderNode]);
+        mat4.translate(this.cubeWorldTransform, this.cubeWorldTransform, [0.0, 0.0, -10.0]);
+        const worldTransformNode = new SceneGraphTransformNode(this.cubeWorldTransform, [shaderNode]);
 
         const cameraNode = new SceneGraphCameraNode(new Camera(), [worldTransformNode]);
 
@@ -81,20 +94,26 @@ export default class Scene extends React.Component<{}, {}> {
     private makeDefaultShader(gl: WebGL2RenderingContext) {
         const vsSource = `
             attribute vec4 aVertexPosition;
+            attribute vec4 aVertexColor;
 
             uniform mat4 uWorldMatrix;
             uniform mat4 uProjectionViewMatrix;
 
+            varying lowp vec4 vColor;
+
             void main() {
                 gl_Position = uProjectionViewMatrix * uWorldMatrix * aVertexPosition;
+                vColor = aVertexColor;
             }`;
 
         const fsSource = `
+            varying lowp vec4 vColor;
+
             void main() {
-                gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+                gl_FragColor = vColor;
             }`;
 
-        const attributes = [AttributeName.VertexPosition];
+        const attributes = [AttributeName.VertexPosition, AttributeName.VertexColor];
         const uniforms = [UniformName.ProjectionViewMatrix, UniformName.WorldMatrix];
         return this.shaderMaker.makeShaderProgram(gl, vsSource, fsSource, attributes, uniforms);
     }

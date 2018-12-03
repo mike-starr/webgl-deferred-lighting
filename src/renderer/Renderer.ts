@@ -1,7 +1,7 @@
 import { mat4 } from "gl-matrix";
 import SceneGraphVisitor from "../scenegraph/SceneGraphVisitor";
 import SceneGraphNode from "../scenegraph/SceneGraphNode";
-import { AttributeName, UniformName } from "../engine/ShaderDescription";
+import { UniformName } from "../engine/ShaderDescription";
 import ShaderProgram from "../engine/ShaderProgram";
 import Mesh from "../Mesh/Mesh";
 
@@ -13,11 +13,7 @@ export default class Renderer implements SceneGraphVisitor {
     constructor(private readonly gl: WebGL2RenderingContext) {
     }
 
-    render(sceneGraphRoot: SceneGraphNode) {
-        if (!this.gl) {
-            return;
-        }
-
+    render(sceneGraphRoot: SceneGraphNode): void {
         this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
         this.gl.clearDepth(1.0);
         this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
@@ -56,28 +52,19 @@ export default class Renderer implements SceneGraphVisitor {
         this.gl.useProgram(currentShader.program);
 
         for (const attribute of currentShader.description.attributes) {
-            switch (attribute.name) {
-                case AttributeName.VertexPosition:
-                    {
-                        const meshVertexPositionAttribute = mesh.vertexAttributeMap.get(attribute.name);
-                        if (!meshVertexPositionAttribute) {
-                            throw new Error("Mesh has no vertex position data.");
-                        }
-
-                        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, meshVertexPositionAttribute.buffer);
-                        this.gl.vertexAttribPointer(attribute.location,
-                            meshVertexPositionAttribute.componentCount,
-                            meshVertexPositionAttribute.type,
-                            meshVertexPositionAttribute.normalized,
-                            meshVertexPositionAttribute.stride,
-                            meshVertexPositionAttribute.offset);
-                        this.gl.enableVertexAttribArray(attribute.location);
-                    }
-                    break;
-
-                default:
-                    throw new Error("Unknown attribute name.");
+            const vertexAttribute = mesh.vertexAttributeMap.get(attribute.name);
+            if (!vertexAttribute) {
+                throw new Error(`Mesh is missing data for attribute: ${attribute.name}`);
             }
+
+            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, vertexAttribute.buffer);
+            this.gl.vertexAttribPointer(attribute.location,
+                vertexAttribute.componentCount,
+                vertexAttribute.type,
+                vertexAttribute.normalized,
+                vertexAttribute.stride,
+                vertexAttribute.offset);
+            this.gl.enableVertexAttribArray(attribute.location);
         }
 
         for (const uniform of currentShader.description.uniforms) {

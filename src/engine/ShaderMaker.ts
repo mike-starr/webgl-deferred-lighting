@@ -69,13 +69,9 @@ export default class ShaderMaker {
             throw new Error(`Failed to create shader.`);
         }
 
-        // Send the source to the shader object
         gl.shaderSource(shader, source);
-
-        // Compile the shader program
         gl.compileShader(shader);
 
-        // See if it compiled successfully
         if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
             throw new Error(`Shader compilation error: ${gl.getShaderInfoLog(shader)}`);
         }

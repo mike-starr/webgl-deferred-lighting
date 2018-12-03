@@ -6,9 +6,10 @@ export default class MeshLoader {
 
     loadCube(gl: WebGL2RenderingContext, halfExtent: number): Mesh {
         const positionBuffer = gl.createBuffer();
+        const colorBuffer = gl.createBuffer();
         const elementBuffer = gl.createBuffer();
 
-        if (!(positionBuffer && elementBuffer)) {
+        if (!(positionBuffer && elementBuffer && colorBuffer)) {
             throw new Error("Unable to create buffer.");
         }
 
@@ -25,6 +26,20 @@ export default class MeshLoader {
 
         gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+
+        const colors = [
+            0.8, 0.0, 0.0,
+            0.0, 0.8, 0.0,
+            0.0, 0.0, 0.8,
+            0.4, 0.4, 0.0,
+            0.4, 0.0, 0.4,
+            0.0, 0.4, 0.4,
+            0.7, 0.7, 0.7,
+            0.2, 0.2, 0.2,
+        ];
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
 
         const indices = [
             // front face
@@ -56,6 +71,7 @@ export default class MeshLoader {
         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
 
         const vertexAttributeMap = new Map<AttributeName, MeshVertexAttribute>();
+
         const vertexPositionAttribute = {
             name: AttributeName.VertexPosition,
             buffer: positionBuffer,
@@ -67,6 +83,18 @@ export default class MeshLoader {
         };
 
         vertexAttributeMap.set(AttributeName.VertexPosition, vertexPositionAttribute);
+
+        const vertexColorAttribute = {
+            name: AttributeName.VertexColor,
+            buffer: colorBuffer,
+            componentCount: 3,
+            type: gl.FLOAT,
+            normalized: false,
+            stride: 0,
+            offset: 0
+        };
+
+        vertexAttributeMap.set(AttributeName.VertexColor, vertexColorAttribute);
 
         return {
             vertexAttributeMap: vertexAttributeMap,
