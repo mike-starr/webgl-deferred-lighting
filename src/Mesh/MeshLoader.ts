@@ -4,7 +4,7 @@ import Mesh from "./Mesh";
 
 export default class MeshLoader {
 
-    loadTexturedQuad(gl: WebGL2RenderingContext /*, the texture */) {
+    loadTexturedQuad(gl: WebGL2RenderingContext, left: number, right: number, bottom: number, top: number) {
         const positionBuffer = gl.createBuffer();
         const texCoordBuffer = gl.createBuffer();
         const elementBuffer = gl.createBuffer();
@@ -14,10 +14,10 @@ export default class MeshLoader {
         }
 
         const vertices = [
-            -0.5, -0.5, 0.0,
-            -0.5, 0.5, 0.0,
-            0.5, 0.5, 0.0,
-            0.5, -0.5, 0.0
+            left, bottom, 0.0,
+            left, top, 0.0,
+            right, top, 0.0,
+            right, bottom, 0.0
         ];
 
         gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);

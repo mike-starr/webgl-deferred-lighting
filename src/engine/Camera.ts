@@ -30,6 +30,13 @@ export default class Camera {
         return this._projectionViewMatrix;
     }
 
+    setProjectionOrthographic(left: number, right: number,
+        bottom: number, top: number,
+        near: number, far: number) {
+        mat4.ortho(this.projectionMatrix, left, right, bottom, top, near, far);
+        this.updateProjectionView();
+    }
+
     private updateProjectionView() {
         mat4.mul(this._projectionViewMatrix, this.projectionMatrix, this.viewMatrix);
     }

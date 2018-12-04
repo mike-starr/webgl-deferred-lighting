@@ -28,7 +28,7 @@ export default class Scene extends React.Component<{}, {}> {
     }
 
     componentDidMount() {
-        const canvas = this.refs[this.canvasElementId] as HTMLCanvasElement
+        const canvas = this.refs[this.canvasElementId] as HTMLCanvasElement;
         const gl = canvas.getContext('webgl2');
 
         if (!gl) {
@@ -81,23 +81,23 @@ export default class Scene extends React.Component<{}, {}> {
 
     private createScene(gl: WebGL2RenderingContext): SceneGraphNode {
         const cubeNode = new SceneGraphMeshNode(this.meshLoader.loadCube(gl, 0.5));
-        const quadNode = new SceneGraphMeshNode(this.meshLoader.loadTexturedQuad(gl));
-
-        const textureNode = new SceneGraphTextureNode(this.createTestTexture(gl), gl.TEXTURE0, [quadNode]);
-
         const cubeShaderNode = new SceneGraphShaderProgramNode(this.makeDefaultShader(gl), [cubeNode]);
-        const quadShaderNode = new SceneGraphShaderProgramNode(this.makeTextureShader(gl), [textureNode]);
-
         mat4.translate(this.cubeWorldTransform, this.cubeWorldTransform, [0.0, 0.0, -10.0]);
         const cubeTransformNode = new SceneGraphTransformNode(this.cubeWorldTransform, [cubeShaderNode]);
+        const cameraNodeMain = new SceneGraphCameraNode(new Camera(), [cubeTransformNode]);
 
+        const quadNode = new SceneGraphMeshNode(this.meshLoader.loadTexturedQuad(gl, -1.0, -0.5, 0.5, 1.0));
+        const textureNode = new SceneGraphTextureNode(this.createTestTexture(gl), gl.TEXTURE0, [quadNode]);
+        const quadShaderNode = new SceneGraphShaderProgramNode(this.makeTextureShader(gl), [textureNode]);
         const quadTransform = mat4.create();
-        mat4.translate(quadTransform, quadTransform, [-2.0, 1.5, -5.0]);
         const quadTransformNode = new SceneGraphTransformNode(quadTransform, [quadShaderNode]);
+        const camera2d = new Camera();
+        camera2d.setProjectionOrthographic(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0);
+        const cameraNode2d = new SceneGraphCameraNode(camera2d, [quadTransformNode]);
 
-        const cameraNode = new SceneGraphCameraNode(new Camera(), [quadTransformNode, cubeTransformNode]);
+        const rootNode = new SceneGraphNode([cameraNodeMain, cameraNode2d]);
 
-        return cameraNode;
+        return rootNode;
     }
 
     private makeDefaultShader(gl: WebGL2RenderingContext) {
@@ -171,7 +171,7 @@ export default class Scene extends React.Component<{}, {}> {
         const border = 0;
         const srcFormat = gl.RGBA;
         const srcType = gl.UNSIGNED_BYTE;
-        const pixel = new Uint8Array([0, 0, 255, 255]);  // opaque blue
+        const pixel = new Uint8Array([0, 0, 255, 255]);
         gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
                       width, height, border, srcFormat, srcType,
                       pixel);
