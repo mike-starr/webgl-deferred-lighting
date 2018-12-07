@@ -13,27 +13,28 @@ export default class Camera {
 
     constructor() {
         this.projectionMatrix = mat4.create();
+        this.viewMatrix = mat4.create();
+        this._projectionViewMatrix = mat4.create();
 
-        mat4.perspective(this.projectionMatrix,
+        this.setProjectionPerspective(
             Camera.defaultFieldOfView,
             Camera.defaultAspectRatio,
             Camera.defaultNearZ,
             Camera.defaultFarZ);
-
-        this.viewMatrix = mat4.create();
-
-        this._projectionViewMatrix = mat4.create();
-        this.updateProjectionView();
     }
 
     public get projectionViewMatrix(): mat4 {
         return this._projectionViewMatrix;
     }
 
-    setProjectionOrthographic(left: number, right: number,
-        bottom: number, top: number,
-        near: number, far: number) {
+    setProjectionOrthographic(left: number, right: number, bottom: number,
+        top: number, near: number, far: number) {
         mat4.ortho(this.projectionMatrix, left, right, bottom, top, near, far);
+        this.updateProjectionView();
+    }
+
+    setProjectionPerspective(fov: number, aspectRatio: number, nearZ: number, farZ: number) {
+        mat4.perspective(this.projectionMatrix, fov, aspectRatio, nearZ, farZ);
         this.updateProjectionView();
     }
 

@@ -11,6 +11,7 @@ import ShaderMaker from "../engine/ShaderMaker";
 import { AttributeName, UniformName } from "../engine/ShaderDescription";
 import SceneGraphMeshNode from "../scenegraph/SceneGraphMeshNode";
 import SceneGraphTextureNode from "../scenegraph/SceneGraphTextureNode";
+import SceneGraphGBufferNode from "../scenegraph/SceneGraphGBufferNode";
 
 export default class Scene extends React.Component<{}, {}> {
     private readonly canvasElementId = "webgl-canvas";
@@ -82,8 +83,12 @@ export default class Scene extends React.Component<{}, {}> {
     private createScene(gl: WebGL2RenderingContext): SceneGraphNode {
         const cubeNode = new SceneGraphMeshNode(this.meshLoader.loadCube(gl, 0.5));
         const cubeShaderNode = new SceneGraphShaderProgramNode(this.makeDefaultShader(gl), [cubeNode]);
+
+        const cubeGShaderNode = new SceneGraphShaderProgramNode(this.makeGBufferShader(gl), [cubeNode]);
+        const gBufferNode = new SceneGraphGBufferNode([cubeGShaderNode]);
+
         mat4.translate(this.cubeWorldTransform, this.cubeWorldTransform, [0.0, 0.0, -10.0]);
-        const cubeTransformNode = new SceneGraphTransformNode(this.cubeWorldTransform, [cubeShaderNode]);
+        const cubeTransformNode = new SceneGraphTransformNode(this.cubeWorldTransform, [gBufferNode, cubeShaderNode]);
         const cameraNodeMain = new SceneGraphCameraNode(new Camera(), [cubeTransformNode]);
 
         const quadNode = new SceneGraphMeshNode(this.meshLoader.loadTexturedQuad(gl, -1.0, -0.5, 0.5, 1.0));
@@ -101,25 +106,31 @@ export default class Scene extends React.Component<{}, {}> {
     }
 
     private makeDefaultShader(gl: WebGL2RenderingContext) {
-        const vsSource = `
-            attribute vec4 aVertexPosition;
-            attribute vec4 aVertexColor;
+        const vsSource =
+            `#version 300 es
+            in vec4 aVertexPosition;
+            in vec4 aVertexColor;
 
             uniform mat4 uWorldMatrix;
             uniform mat4 uProjectionViewMatrix;
 
-            varying lowp vec4 vColor;
+            out lowp vec4 vColor;
 
             void main() {
                 gl_Position = uProjectionViewMatrix * uWorldMatrix * aVertexPosition;
                 vColor = aVertexColor;
             }`;
 
-        const fsSource = `
-            varying lowp vec4 vColor;
+        const fsSource =
+            `#version 300 es
+            precision highp float;
+
+            in lowp vec4 vColor;
+
+            out vec4 fragColor;
 
             void main() {
-                gl_FragColor = vColor;
+                fragColor = vColor;
             }`;
 
         const attributes = [AttributeName.VertexPosition, AttributeName.VertexColor];
@@ -128,31 +139,89 @@ export default class Scene extends React.Component<{}, {}> {
     }
 
     private makeTextureShader(gl: WebGL2RenderingContext) {
-        const vsSource = `
-            attribute vec4 aVertexPosition;
-            attribute vec2 aTexCoord0;
+        const vsSource =
+            `#version 300 es
+
+            in vec4 aVertexPosition;
+            in vec2 aTexCoord0;
 
             uniform mat4 uWorldMatrix;
             uniform mat4 uProjectionViewMatrix;
 
-            varying lowp vec2 vTexCoord0;
+            out vec2 vTexCoord0;
 
             void main() {
                 gl_Position = uProjectionViewMatrix * uWorldMatrix * aVertexPosition;
                 vTexCoord0 = aTexCoord0;
             }`;
 
-        const fsSource = `
+        const fsSource =
+            `#version 300 es
+            precision highp float;
+
             uniform sampler2D uTextureSampler0;
 
-            varying lowp vec2 vTexCoord0;
+            in vec2 vTexCoord0;
+
+            out vec4 fragColor;
 
             void main() {
-                gl_FragColor = texture2D(uTextureSampler0, vTexCoord0);
+                fragColor = texture(uTextureSampler0, vTexCoord0);
             }`;
 
         const attributes = [AttributeName.VertexPosition, AttributeName.TexCoord0];
         const uniforms = [UniformName.ProjectionViewMatrix, UniformName.WorldMatrix, UniformName.TextureSampler0];
+        return this.shaderMaker.makeShaderProgram(gl, vsSource, fsSource, attributes, uniforms);
+    }
+
+    private makeGBufferShader(gl: WebGL2RenderingContext) {
+        const vsSource =
+            `#version 300 es
+
+            in vec4 aVertexPosition;
+            in vec4 aVertexColor;
+            in vec3 aVertexNormal;
+            //in vec2 aTexCoord0;
+
+            uniform mat4 uWorldMatrix;
+            uniform mat4 uProjectionViewMatrix;
+
+            //out vec2 vTexCoord0;
+            out vec4 vWorldPosition;
+            out vec4 vDiffuse;
+            out vec4 vNormal;
+
+            void main() {
+                gl_Position = uProjectionViewMatrix * uWorldMatrix * aVertexPosition;
+                vWorldPosition = uWorldMatrix * aVertexPosition;
+                vNormal = uWorldMatrix * vec4(aVertexNormal, 0.0);
+                vDiffuse = aVertexColor;
+                //vTexCoord0 = aTexCoord0;
+            }`;
+
+        const fsSource =
+            `#version 300 es
+            precision highp float;
+
+            //uniform sampler2D uTextureSampler0;
+
+            //in vec2 vTexCoord0;
+            in vec4 vWorldPosition;
+            in vec4 vDiffuse;
+            in vec4 vNormal;
+
+            layout(location=0) out vec4 fragPosition;
+            layout(location=1) out vec4 fragNormal;
+            layout(location=2) out vec4 fragDiffuse;
+
+            void main() {
+                fragPosition = vWorldPosition;
+                fragDiffuse = vDiffuse;
+                fragNormal = vec4(vNormal.xyz, 1.0);
+            }`;
+
+        const attributes = [AttributeName.VertexPosition, AttributeName.VertexColor, AttributeName.VertexNormal];
+        const uniforms = [UniformName.ProjectionViewMatrix, UniformName.WorldMatrix];//, UniformName.TextureSampler0];
         return this.shaderMaker.makeShaderProgram(gl, vsSource, fsSource, attributes, uniforms);
     }
 

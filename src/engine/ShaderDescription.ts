@@ -1,5 +1,6 @@
 export enum AttributeName {
     VertexPosition = "aVertexPosition",
+    VertexNormal = "aVertexNormal",
     VertexColor = "aVertexColor",
     TexCoord0 = "aTexCoord0"
 };

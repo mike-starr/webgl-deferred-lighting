@@ -81,21 +81,49 @@ export default class MeshLoader {
     loadCube(gl: WebGL2RenderingContext, halfExtent: number): Mesh {
         const positionBuffer = gl.createBuffer();
         const colorBuffer = gl.createBuffer();
+        const normalBuffer = gl.createBuffer();
         const elementBuffer = gl.createBuffer();
 
-        if (!(positionBuffer && elementBuffer && colorBuffer)) {
+        if (!(positionBuffer && elementBuffer && colorBuffer && normalBuffer)) {
             throw new Error("Unable to create buffer.");
         }
 
         const vertices = [
-            -halfExtent, halfExtent, -halfExtent,
-            halfExtent, halfExtent, -halfExtent,
+            // Front face.
+            -halfExtent, -halfExtent, halfExtent,
+            halfExtent, -halfExtent, halfExtent,
+            halfExtent, halfExtent, halfExtent,
+            -halfExtent, halfExtent, halfExtent,
+
+            // Back face.
             halfExtent, -halfExtent, -halfExtent,
             -halfExtent, -halfExtent, -halfExtent,
+            -halfExtent, halfExtent, -halfExtent,
+            halfExtent, halfExtent, -halfExtent,
+
+            // Top face.
             -halfExtent, halfExtent, halfExtent,
             halfExtent, halfExtent, halfExtent,
+            halfExtent, halfExtent, -halfExtent,
+            -halfExtent, halfExtent, -halfExtent,
+
+            // Bottom face.
             halfExtent, -halfExtent, halfExtent,
-            -halfExtent, -halfExtent, halfExtent
+            -halfExtent, -halfExtent, halfExtent,
+            -halfExtent, -halfExtent, -halfExtent,
+            halfExtent, -halfExtent, -halfExtent,
+
+            // Left face.
+            -halfExtent, -halfExtent, halfExtent,
+            -halfExtent, halfExtent, halfExtent,
+            -halfExtent, halfExtent, -halfExtent,
+            -halfExtent, -halfExtent, -halfExtent,
+
+            // Right face.
+            halfExtent, -halfExtent, -halfExtent,
+            halfExtent, halfExtent, -halfExtent,
+            halfExtent, halfExtent, halfExtent,
+            halfExtent, -halfExtent, halfExtent,
         ];
 
         gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
@@ -103,42 +131,98 @@ export default class MeshLoader {
 
         const colors = [
             0.8, 0.0, 0.0,
+            0.8, 0.0, 0.0,
+            0.8, 0.0, 0.0,
+            0.8, 0.0, 0.0,
+
             0.0, 0.8, 0.0,
+            0.0, 0.8, 0.0,
+            0.0, 0.8, 0.0,
+            0.0, 0.8, 0.0,
+
             0.0, 0.0, 0.8,
-            0.4, 0.4, 0.0,
-            0.4, 0.0, 0.4,
-            0.0, 0.4, 0.4,
-            0.7, 0.7, 0.7,
-            0.2, 0.2, 0.2,
+            0.0, 0.0, 0.8,
+            0.0, 0.0, 0.8,
+            0.0, 0.0, 0.8,
+
+            0.6, 0.6, 0.0,
+            0.6, 0.6, 0.0,
+            0.6, 0.6, 0.0,
+            0.6, 0.6, 0.0,
+
+            0.6, 0.0, 0.6,
+            0.6, 0.0, 0.6,
+            0.6, 0.0, 0.6,
+            0.6, 0.0, 0.6,
+
+            0.0, 0.6, 0.6,
+            0.0, 0.6, 0.6,
+            0.0, 0.6, 0.6,
+            0.0, 0.6, 0.6
         ];
 
         gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
 
+        const normals = [
+            0.0, 0.0, 1.0,
+            0.0, 0.0, 1.0,
+            0.0, 0.0, 1.0,
+            0.0, 0.0, 1.0,
+
+            0.0, 0.0, -1.0,
+            0.0, 0.0, -1.0,
+            0.0, 0.0, -1.0,
+            0.0, 0.0, -1.0,
+
+            0.0, 1.0, 0.0,
+            0.0, 1.0, 0.0,
+            0.0, 1.0, 0.0,
+            0.0, 1.0, 0.0,
+
+            0.0, -1.0, 0.0,
+            0.0, -1.0, 0.0,
+            0.0, -1.0, 0.0,
+            0.0, -1.0, 0.0,
+
+            -1.0, 0.0, 0.0,
+            -1.0, 0.0, 0.0,
+            -1.0, 0.0, 0.0,
+            -1.0, 0.0, 0.0,
+
+            1.0, 0.0, 0.0,
+            1.0, 0.0, 0.0,
+            1.0, 0.0, 0.0,
+            1.0, 0.0, 0.0
+        ];
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normals), gl.STATIC_DRAW);
+
         const indices = [
             // front face
-            0, 3, 2,
-            2, 1, 0,
+            0, 1, 2,
+            2, 3, 0,
 
             // back face
             4, 5, 6,
             6, 7, 4,
 
-            // left face
-            0, 4, 7,
-            7, 3, 0,
-
-            // right face
-            1, 2, 6,
-            6, 5, 1,
-
             // top face
-            1, 5, 4,
-            4, 0, 1,
+            8, 9, 10,
+            10, 11, 8,
 
             // bottom face
-            3, 7, 6,
-            6, 2, 3
+            12, 13, 14,
+            14, 15, 12,
+
+            // left face
+            16, 17, 18,
+            18, 19, 16,
+
+            // right face
+            20, 21, 22,
+            22, 23, 20
         ];
 
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, elementBuffer);
@@ -169,6 +253,18 @@ export default class MeshLoader {
         };
 
         vertexAttributeMap.set(AttributeName.VertexColor, vertexColorAttribute);
+
+        const vertexNormalAttribute = {
+            name: AttributeName.VertexNormal,
+            buffer: normalBuffer,
+            componentCount: 3,
+            type: gl.FLOAT,
+            normalized: false,
+            stride: 0,
+            offset: 0
+        };
+
+        vertexAttributeMap.set(AttributeName.VertexNormal, vertexNormalAttribute);
 
         return {
             vertexAttributeMap: vertexAttributeMap,
