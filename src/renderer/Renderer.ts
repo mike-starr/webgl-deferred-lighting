@@ -4,68 +4,17 @@ import SceneGraphNode from "../scenegraph/SceneGraphNode";
 import { UniformName } from "../engine/ShaderDescription";
 import ShaderProgram from "../engine/ShaderProgram";
 import Mesh from "../Mesh/Mesh";
+import SceneGraphGBufferNode from "../scenegraph/SceneGraphGBufferNode";
 
 export default class Renderer implements SceneGraphVisitor {
     private worldMatrixStack: mat4[] = [];
     private projectionViewMatrixStack: mat4[] = [];
     private shaderProgramStack: ShaderProgram[] = [];
 
-
-    private gBuffer: any;
-    private positionTexture: any;
-    private normalTexture: any;
-    private colorTexture: any;
-
-
     constructor(private readonly gl: WebGL2RenderingContext) {
         if (!this.gl.getExtension("EXT_color_buffer_float")) {
             throw new Error("Extension EXT_color_buffer_float is not available.");
         }
-
-        this.gBuffer = this.gl.createFramebuffer();
-        this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, this.gBuffer);
-
-        this.positionTexture = gl.createTexture();
-        gl.bindTexture(gl.TEXTURE_2D, this.positionTexture);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA16F, gl.drawingBufferWidth, gl.drawingBufferHeight);
-        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.positionTexture, 0);
-
-        this.normalTexture = gl.createTexture();
-        gl.bindTexture(gl.TEXTURE_2D, this.normalTexture);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA32F, gl.drawingBufferWidth, gl.drawingBufferHeight);
-        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT1, gl.TEXTURE_2D, this.normalTexture, 0);
-
-        this.colorTexture = gl.createTexture();
-        gl.bindTexture(gl.TEXTURE_2D, this.colorTexture);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, gl.drawingBufferWidth, gl.drawingBufferHeight);
-        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT2, gl.TEXTURE_2D, this.colorTexture, 0);
-
-        const depthTexture = gl.createTexture();
-        gl.bindTexture(gl.TEXTURE_2D, depthTexture);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        gl.texStorage2D(gl.TEXTURE_2D, 1, gl.DEPTH_COMPONENT16, gl.drawingBufferWidth, gl.drawingBufferHeight);
-        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, depthTexture, 0);
-
-        gl.drawBuffers([ gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1, gl.COLOR_ATTACHMENT2 ]);
-
-        this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
-
-        console.log(this.gl.checkFramebufferStatus(this.gl.FRAMEBUFFER));
     }
 
     render(sceneGraphRoot: SceneGraphNode): void {
@@ -105,18 +54,17 @@ export default class Renderer implements SceneGraphVisitor {
 
     bindTexture(texture: WebGLTexture, index: GLenum): void {
         this.gl.activeTexture(index);
-        //this.gl.bindTexture(this.gl.TEXTURE_2D, texture);
-        this.gl.bindTexture(this.gl.TEXTURE_2D, this.normalTexture);
+        this.gl.bindTexture(this.gl.TEXTURE_2D, texture);
     }
 
-    beginGBufferPass(): void {
-        this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, this.gBuffer);
+    beginGBufferPass(node: SceneGraphGBufferNode): void {
+        this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, node.frameBuffer);
 
         this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
         this.gl.clearDepth(1.0);
-        this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
         this.gl.enable(this.gl.DEPTH_TEST);
         this.gl.depthFunc(this.gl.LEQUAL);
+        this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
     }
 
     endGBufferPass(): void {

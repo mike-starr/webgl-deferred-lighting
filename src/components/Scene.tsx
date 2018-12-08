@@ -82,20 +82,39 @@ export default class Scene extends React.Component<{}, {}> {
 
     private createScene(gl: WebGL2RenderingContext): SceneGraphNode {
         const cubeNode = new SceneGraphMeshNode(this.meshLoader.loadCube(gl, 0.5));
-        const cubeShaderNode = new SceneGraphShaderProgramNode(this.makeDefaultShader(gl), [cubeNode]);
-
-        const cubeGShaderNode = new SceneGraphShaderProgramNode(this.makeGBufferShader(gl), [cubeNode]);
-        const gBufferNode = new SceneGraphGBufferNode([cubeGShaderNode]);
+        const cubeNode2 = new SceneGraphMeshNode(this.meshLoader.loadCube(gl, 1.5));
 
         mat4.translate(this.cubeWorldTransform, this.cubeWorldTransform, [0.0, 0.0, -10.0]);
-        const cubeTransformNode = new SceneGraphTransformNode(this.cubeWorldTransform, [gBufferNode, cubeShaderNode]);
-        const cameraNodeMain = new SceneGraphCameraNode(new Camera(), [cubeTransformNode]);
+        const cubeTransformNode = new SceneGraphTransformNode(this.cubeWorldTransform, [cubeNode]);
 
-        const quadNode = new SceneGraphMeshNode(this.meshLoader.loadTexturedQuad(gl, -1.0, -0.5, 0.5, 1.0));
-        const textureNode = new SceneGraphTextureNode(this.createTestTexture(gl), gl.TEXTURE0, [quadNode]);
-        const quadShaderNode = new SceneGraphShaderProgramNode(this.makeTextureShader(gl), [textureNode]);
+        const cube2Transform = mat4.create();
+        mat4.translate(cube2Transform, cube2Transform, [5.0, 5.0, -40.0]);
+        const cube2TransformNode = new SceneGraphTransformNode(cube2Transform, [cubeNode2]);
+
+        const cubeShaderNode = new SceneGraphShaderProgramNode(this.makeDefaultShader(gl), [cube2TransformNode, cubeTransformNode]);
+
+        const cubeGShaderNode = new SceneGraphShaderProgramNode(this.makeGBufferShader(gl), [cube2TransformNode, cubeTransformNode]);
+        const gBufferNode = this.createGBufferNode(gl, [cubeGShaderNode]);
+
+        const cameraNodeMain = new SceneGraphCameraNode(new Camera(), [cubeShaderNode, gBufferNode]);
+
+        // 2D overlays
+        const quadNodeUpperLeft = new SceneGraphMeshNode(this.meshLoader.loadTexturedQuad(gl, -1.0, -0.5, 0.5, 1.0));
+        const textureNodeDiffuseG = new SceneGraphTextureNode(gBufferNode.diffuseTarget, gl.TEXTURE0, [quadNodeUpperLeft]);
+
+        const quadNodeLowerLeft = new SceneGraphMeshNode(this.meshLoader.loadTexturedQuad(gl, -1.0, -0.5, -1.0, -0.5));
+        const textureNodePositionG = new SceneGraphTextureNode(gBufferNode.positionTarget, gl.TEXTURE0, [quadNodeLowerLeft]);
+
+        const quadNodeUpperRight = new SceneGraphMeshNode(this.meshLoader.loadTexturedQuad(gl, 0.5, 1.0, 0.5, 1.0));
+        const textureNodeNormalG = new SceneGraphTextureNode(gBufferNode.normalTarget, gl.TEXTURE0, [quadNodeUpperRight]);
+
+        const quadNodeLowerRight = new SceneGraphMeshNode(this.meshLoader.loadTexturedQuad(gl, 0.5, 1.0, -1.0, -0.5));
+        const textureNodeDepthG = new SceneGraphTextureNode(gBufferNode.depthTarget, gl.TEXTURE0, [quadNodeLowerRight]);
+        const depthShaderNode = new SceneGraphShaderProgramNode(this.makeTextureShader(gl, true), [textureNodeDepthG]);
+
+        const quadShaderNode = new SceneGraphShaderProgramNode(this.makeTextureShader(gl), [textureNodeDiffuseG, textureNodePositionG, textureNodeNormalG]);
         const quadTransform = mat4.create();
-        const quadTransformNode = new SceneGraphTransformNode(quadTransform, [quadShaderNode]);
+        const quadTransformNode = new SceneGraphTransformNode(quadTransform, [quadShaderNode, depthShaderNode]);
         const camera2d = new Camera();
         camera2d.setProjectionOrthographic(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0);
         const cameraNode2d = new SceneGraphCameraNode(camera2d, [quadTransformNode]);
@@ -138,7 +157,7 @@ export default class Scene extends React.Component<{}, {}> {
         return this.shaderMaker.makeShaderProgram(gl, vsSource, fsSource, attributes, uniforms);
     }
 
-    private makeTextureShader(gl: WebGL2RenderingContext) {
+    private makeTextureShader(gl: WebGL2RenderingContext, depthMode: boolean = false) {
         const vsSource =
             `#version 300 es
 
@@ -169,9 +188,31 @@ export default class Scene extends React.Component<{}, {}> {
                 fragColor = texture(uTextureSampler0, vTexCoord0);
             }`;
 
+        const fsDepthSource =
+            `#version 300 es
+            precision highp float;
+
+            uniform sampler2D uTextureSampler0;
+
+            in vec2 vTexCoord0;
+
+            out vec4 fragColor;
+
+            float LinearizeDepth(in vec2 uv) {
+                float zNear = 0.1;
+                float zFar  = 100.0;
+                float depth = texture(uTextureSampler0, uv).x;
+                return (2.0 * zNear) / (zFar + zNear - depth * (zFar - zNear));
+            }
+
+            void main() {
+                float linearDepthValue = LinearizeDepth(vTexCoord0);
+                fragColor = vec4(linearDepthValue, linearDepthValue, linearDepthValue, 1.0);
+            }`;
+
         const attributes = [AttributeName.VertexPosition, AttributeName.TexCoord0];
         const uniforms = [UniformName.ProjectionViewMatrix, UniformName.WorldMatrix, UniformName.TextureSampler0];
-        return this.shaderMaker.makeShaderProgram(gl, vsSource, fsSource, attributes, uniforms);
+        return this.shaderMaker.makeShaderProgram(gl, vsSource, depthMode ? fsDepthSource : fsSource, attributes, uniforms);
     }
 
     private makeGBufferShader(gl: WebGL2RenderingContext) {
@@ -246,5 +287,56 @@ export default class Scene extends React.Component<{}, {}> {
                       pixel);
 
         return texture;
+    }
+
+    private createGBufferNode(gl: WebGL2RenderingContext, children: SceneGraphNode[]): SceneGraphGBufferNode {
+        const frameBuffer = gl.createFramebuffer();
+        if (!frameBuffer) {
+            throw new Error("Failed to create framebuffer.");
+        }
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
+
+        const positionTarget = this.createRenderTargetTexture(gl, gl.RGBA32F);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, positionTarget, 0);
+
+        const normalTarget = this.createRenderTargetTexture(gl, gl.RGBA32F);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT1, gl.TEXTURE_2D, normalTarget, 0);
+
+        const diffuseTarget = this.createRenderTargetTexture(gl, gl.RGBA8);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT2, gl.TEXTURE_2D, diffuseTarget, 0);
+
+        const depthTarget = this.createRenderTargetTexture(gl, gl.DEPTH_COMPONENT24);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, depthTarget, 0);
+
+        gl.drawBuffers([ gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1, gl.COLOR_ATTACHMENT2 ]);
+
+        console.log(gl.checkFramebufferStatus(gl.FRAMEBUFFER));
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+        return new SceneGraphGBufferNode(frameBuffer,
+            diffuseTarget,
+            positionTarget,
+            normalTarget,
+            depthTarget,
+            children);
+    }
+
+    private createRenderTargetTexture(gl: WebGL2RenderingContext, format: GLenum): WebGLTexture {
+        const texture = gl.createTexture();
+        if (!texture) {
+            throw new Error("Failed to create texture.");
+        }
+
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texStorage2D(gl.TEXTURE_2D, 1, format, gl.drawingBufferWidth, gl.drawingBufferHeight);
+
+        return texture;
+
     }
 }

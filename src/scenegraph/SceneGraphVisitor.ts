@@ -1,6 +1,7 @@
 import { mat4 } from "gl-matrix";
 import ShaderProgram from "../engine/ShaderProgram";
 import Mesh from "../Mesh/Mesh";
+import SceneGraphGBufferNode from "./SceneGraphGBufferNode";
 
 export default interface SceneGraphVisitor {
     pushProjectionViewMatrix(projectionViewMatrix: mat4): void;
@@ -10,7 +11,7 @@ export default interface SceneGraphVisitor {
     pushShaderProgram(shaderProgram: ShaderProgram): void;
     popShaderProgram(): void;
     bindTexture(texture: WebGLTexture, index: number): void;
-    beginGBufferPass(): void;
+    beginGBufferPass(node: SceneGraphGBufferNode): void;
     endGBufferPass(): void;
     renderMesh(mesh: Mesh): void;
 }
