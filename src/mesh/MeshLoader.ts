@@ -1,4 +1,4 @@
-import { AttributeName } from "../engine/ShaderDescription";
+import { AttributeName } from "../shaders/ShaderDescription";
 import MeshVertexAttribute from "./MeshVertexAttribute";
 import Mesh from "./Mesh";
 

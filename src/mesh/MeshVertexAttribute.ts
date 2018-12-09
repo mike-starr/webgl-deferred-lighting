@@ -1,4 +1,4 @@
-import { AttributeName } from "../engine/ShaderDescription";
+import { AttributeName } from "../shaders/ShaderDescription";
 
 export default interface MeshVertexAttribute {
     readonly name: AttributeName;

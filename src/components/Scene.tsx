@@ -1,16 +1,16 @@
 import * as React from "react";
 import { mat4, quat, vec3 } from "gl-matrix";
-import Camera from "../engine/Camera";
+import Camera from "../camera/Camera";
 import Renderer from "../renderer/Renderer";
 import SceneGraphTransformNode from "../scenegraph/SceneGraphTransformNode";
 import SceneGraphNode from "../scenegraph/SceneGraphNode";
 import SceneGraphCameraNode from "../scenegraph/SceneGraphCameraNode";
 import MeshLoader from "../mesh/MeshLoader";
 import SceneGraphShaderProgramNode from "../scenegraph/SceneGraphShaderProgramNode";
-import ShaderMaker from "../engine/ShaderMaker";
+import ShaderMaker from "../shaders/ShaderMaker";
 import SceneGraphGBufferNode from "../scenegraph/SceneGraphGBufferNode";
 import SceneGraphRenderableNode from "../scenegraph/SceneGraphRenderableNode";
-import Shaders from "../engine/Shaders";
+import Shaders from "../shaders/Shaders";
 import SceneGraphLightPassNode from "../scenegraph/SceneGraphLightPassNode";
 import LightVolumeLoader from "../lighting/LightVolumeLoader";
 

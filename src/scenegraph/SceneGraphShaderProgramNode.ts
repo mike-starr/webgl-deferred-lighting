@@ -1,6 +1,6 @@
 import SceneGraphNode from "./SceneGraphNode";
 import SceneGraphVisitor from "./SceneGraphVisitor";
-import ShaderProgram from "../engine/ShaderProgram";
+import ShaderProgram from "../shaders/ShaderProgram";
 
 export default class SceneGraphShaderProgramNode extends SceneGraphNode {
 

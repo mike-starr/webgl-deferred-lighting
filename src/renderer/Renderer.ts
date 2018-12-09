@@ -1,8 +1,8 @@
 import { mat4 } from "gl-matrix";
 import SceneGraphVisitor from "../scenegraph/SceneGraphVisitor";
 import SceneGraphNode from "../scenegraph/SceneGraphNode";
-import { UniformName } from "../engine/ShaderDescription";
-import ShaderProgram from "../engine/ShaderProgram";
+import { UniformName } from "../shaders/ShaderDescription";
+import ShaderProgram from "../shaders/ShaderProgram";
 import SceneGraphGBufferNode from "../scenegraph/SceneGraphGBufferNode";
 import SceneGraphLightPassNode from "../scenegraph/SceneGraphLightPassNode";
 import Renderable from "./Renderable";

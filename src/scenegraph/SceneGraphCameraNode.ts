@@ -1,6 +1,6 @@
 import SceneGraphNode from "./SceneGraphNode";
 import SceneGraphVisitor from "./SceneGraphVisitor";
-import Camera from "../engine/Camera";
+import Camera from "../camera/Camera";
 
 export default class SceneGraphCameraNode extends SceneGraphNode {
 

@@ -1,5 +1,5 @@
 import { mat4 } from "gl-matrix";
-import ShaderProgram from "../engine/ShaderProgram";
+import ShaderProgram from "../shaders/ShaderProgram";
 import SceneGraphGBufferNode from "./SceneGraphGBufferNode";
 import SceneGraphLightPassNode from "./SceneGraphLightPassNode";
 import Renderable from "../renderer/Renderable";
