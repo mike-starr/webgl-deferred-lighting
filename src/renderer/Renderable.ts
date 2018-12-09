@@ -1,4 +1,4 @@
-import Mesh from "../Mesh/Mesh";
+import Mesh from "../mesh/Mesh";
 
 export default interface Renderable {
     readonly mesh: Mesh;

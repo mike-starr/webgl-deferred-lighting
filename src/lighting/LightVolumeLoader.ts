@@ -1,6 +1,6 @@
 import { vec3 } from "gl-matrix";
 import DirectionalLightVolume from "./DirectionalLightVolume";
-import MeshLoader from "../Mesh/MeshLoader";
+import MeshLoader from "../mesh/MeshLoader";
 
 export default class LightVolumeLoader {
 

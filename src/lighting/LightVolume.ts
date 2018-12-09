@@ -1,4 +1,3 @@
-import Mesh from "../Mesh/Mesh";
 import { vec3 } from "gl-matrix";
 import Renderable from "../renderer/Renderable";
 

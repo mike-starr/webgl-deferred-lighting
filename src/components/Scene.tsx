@@ -5,7 +5,7 @@ import Renderer from "../renderer/Renderer";
 import SceneGraphTransformNode from "../scenegraph/SceneGraphTransformNode";
 import SceneGraphNode from "../scenegraph/SceneGraphNode";
 import SceneGraphCameraNode from "../scenegraph/SceneGraphCameraNode";
-import MeshLoader from "../Mesh/MeshLoader";
+import MeshLoader from "../mesh/MeshLoader";
 import SceneGraphShaderProgramNode from "../scenegraph/SceneGraphShaderProgramNode";
 import ShaderMaker from "../engine/ShaderMaker";
 import SceneGraphGBufferNode from "../scenegraph/SceneGraphGBufferNode";
