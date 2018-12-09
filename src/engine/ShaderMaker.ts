@@ -3,7 +3,7 @@ import { AttributeName, UniformName, default as ShaderDescription, AttributeDesc
 
 export default class ShaderMaker {
 
-    makeShaderProgram(gl: WebGL2RenderingContext,
+    static makeShaderProgram(gl: WebGL2RenderingContext,
         vertexShaderSource: string,
         fragmentShaderSource: string,
         attributeNames: AttributeName[],
@@ -62,7 +62,7 @@ export default class ShaderMaker {
         }
     }
 
-    private loadShader(gl: WebGL2RenderingContext, type: number, source: string): WebGLShader {
+    private static loadShader(gl: WebGL2RenderingContext, type: number, source: string): WebGLShader {
         const shader = gl.createShader(type);
 
         if (!shader) {

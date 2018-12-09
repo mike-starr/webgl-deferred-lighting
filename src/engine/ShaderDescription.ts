@@ -6,22 +6,31 @@ export enum AttributeName {
 };
 
 export interface AttributeDescription {
-    name: AttributeName
-    location: GLint
+    readonly name: AttributeName;
+    readonly location: GLint;
 };
 
 export enum UniformName {
     ProjectionViewMatrix = "uProjectionViewMatrix",
     WorldMatrix = "uWorldMatrix",
-    TextureSampler0 = "uTextureSampler0"
+    TextureSampler0 = "uTextureSampler0",
+    TextureSampler1 = "uTextureSampler1",
+    TextureSampler2 = "uTextureSampler2",
+    TextureSampler3 = "uTextureSampler3",
+
+    // directional light
+    LightDirectional_Color = "uLightDirectional.color",
+    LightDirectional_Direction = "uLightDirectional.direction",
+    LightDirectional_Intensity = "uLightDirectional.intensity",
+    LightDirectional_AmbientIntensity = "uLightDirectional.ambientIntensity"
 };
 
 export interface UniformDescription {
-    name: UniformName
-    location: WebGLUniformLocation
+    readonly name: UniformName;
+    readonly location: WebGLUniformLocation;
 };
 
 export default interface ShaderDescription {
-    attributes: AttributeDescription[],
-    uniforms: UniformDescription[]
+    readonly attributes: AttributeDescription[];
+    readonly uniforms: UniformDescription[];
 };

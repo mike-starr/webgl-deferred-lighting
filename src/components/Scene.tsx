@@ -1,5 +1,5 @@
 import * as React from "react";
-import { mat4 } from "gl-matrix";
+import { mat4, quat, vec3 } from "gl-matrix";
 import Camera from "../engine/Camera";
 import Renderer from "../renderer/Renderer";
 import SceneGraphTransformNode from "../scenegraph/SceneGraphTransformNode";
@@ -8,10 +8,11 @@ import SceneGraphCameraNode from "../scenegraph/SceneGraphCameraNode";
 import MeshLoader from "../Mesh/MeshLoader";
 import SceneGraphShaderProgramNode from "../scenegraph/SceneGraphShaderProgramNode";
 import ShaderMaker from "../engine/ShaderMaker";
-import { AttributeName, UniformName } from "../engine/ShaderDescription";
-import SceneGraphMeshNode from "../scenegraph/SceneGraphMeshNode";
-import SceneGraphTextureNode from "../scenegraph/SceneGraphTextureNode";
 import SceneGraphGBufferNode from "../scenegraph/SceneGraphGBufferNode";
+import SceneGraphRenderableNode from "../scenegraph/SceneGraphRenderableNode";
+import Shaders from "../engine/Shaders";
+import SceneGraphLightPassNode from "../scenegraph/SceneGraphLightPassNode";
+import LightVolumeLoader from "../lighting/LightVolumeLoader";
 
 export default class Scene extends React.Component<{}, {}> {
     private readonly canvasElementId = "webgl-canvas";
@@ -19,7 +20,6 @@ export default class Scene extends React.Component<{}, {}> {
     private frameId: number = 0;
     private renderer: Renderer | null = null;
     private sceneGraphRoot: SceneGraphNode | null = null;
-    private meshLoader: MeshLoader = new MeshLoader();
     private shaderMaker: ShaderMaker = new ShaderMaker();
     private cubeWorldTransform: mat4 = mat4.create();
     private lastFrameTime: DOMHighResTimeStamp = 0;
@@ -81,8 +81,11 @@ export default class Scene extends React.Component<{}, {}> {
     }
 
     private createScene(gl: WebGL2RenderingContext): SceneGraphNode {
-        const cubeNode = new SceneGraphMeshNode(this.meshLoader.loadCube(gl, 0.5));
-        const cubeNode2 = new SceneGraphMeshNode(this.meshLoader.loadCube(gl, 1.5));
+        const cubeNode = new SceneGraphRenderableNode({ mesh: MeshLoader.loadCube(gl, 0.5), textures: [] });
+        const cubeNode2 = new SceneGraphRenderableNode({ mesh: MeshLoader.loadCube(gl, 1.5), textures: [] });
+
+
+        Shaders.makeDirectionalLightVolumeShader(gl);
 
         mat4.translate(this.cubeWorldTransform, this.cubeWorldTransform, [0.0, 0.0, -10.0]);
         const cubeTransformNode = new SceneGraphTransformNode(this.cubeWorldTransform, [cubeNode]);
@@ -91,28 +94,39 @@ export default class Scene extends React.Component<{}, {}> {
         mat4.translate(cube2Transform, cube2Transform, [5.0, 5.0, -40.0]);
         const cube2TransformNode = new SceneGraphTransformNode(cube2Transform, [cubeNode2]);
 
-        const cubeShaderNode = new SceneGraphShaderProgramNode(this.makeDefaultShader(gl), [cube2TransformNode, cubeTransformNode]);
+        //const cubeShaderNode = new SceneGraphShaderProgramNode(Shaders.makeDefaultShader(gl), [cube2TransformNode, cubeTransformNode]);
 
-        const cubeGShaderNode = new SceneGraphShaderProgramNode(this.makeGBufferShader(gl), [cube2TransformNode, cubeTransformNode]);
+        const cubeGShaderNode = new SceneGraphShaderProgramNode(Shaders.makeGBufferShader(gl), [cube2TransformNode, cubeTransformNode]);
         const gBufferNode = this.createGBufferNode(gl, [cubeGShaderNode]);
 
-        const cameraNodeMain = new SceneGraphCameraNode(new Camera(), [cubeShaderNode, gBufferNode]);
+        const directionalLightVolume = LightVolumeLoader.createDirectional(gl,
+            vec3.fromValues(1.0, 0.0, 1.0),
+            vec3.fromValues(1.0, 0.0, 0.0),
+            0.8,
+            0.2,
+            gBufferNode.positionTarget,
+            gBufferNode.normalTarget,
+            gBufferNode.diffuseTarget);
+        const directionalLightVolumeNode = new SceneGraphRenderableNode(directionalLightVolume);
+
+        const directionalLightVolumeTransform = mat4.create();
+        mat4.fromRotationTranslationScale(directionalLightVolumeTransform, quat.create(), [0.0, 0.0, -50.2], [100.0, 100.0, 100.0]);
+        const directionalLightVolumeTransformNode = new SceneGraphTransformNode(directionalLightVolumeTransform, [directionalLightVolumeNode]);
+
+        const lightPassShaderNode = new SceneGraphShaderProgramNode(Shaders.makeDirectionalLightVolumeShader(gl), [directionalLightVolumeTransformNode])
+        const lightPassNode = new SceneGraphLightPassNode([lightPassShaderNode]);
+
+        const cameraNodeMain = new SceneGraphCameraNode(new Camera(), [/*cubeShaderNode,*/ gBufferNode, lightPassNode]);
 
         // 2D overlays
-        const quadNodeUpperLeft = new SceneGraphMeshNode(this.meshLoader.loadTexturedQuad(gl, -1.0, -0.5, 0.5, 1.0));
-        const textureNodeDiffuseG = new SceneGraphTextureNode(gBufferNode.diffuseTarget, gl.TEXTURE0, [quadNodeUpperLeft]);
+        const quadNodeUpperLeft = new SceneGraphRenderableNode({ mesh: MeshLoader.loadTexturedQuad(gl, -1.0, -0.5, 0.5, 1.0), textures: [gBufferNode.diffuseTarget] });
+        const quadNodeLowerLeft = new SceneGraphRenderableNode({ mesh: MeshLoader.loadTexturedQuad(gl, -1.0, -0.5, -1.0, -0.5), textures: [gBufferNode.positionTarget] });
+        const quadNodeUpperRight = new SceneGraphRenderableNode({ mesh: MeshLoader.loadTexturedQuad(gl, 0.5, 1.0, 0.5, 1.0), textures: [gBufferNode.normalTarget] });
 
-        const quadNodeLowerLeft = new SceneGraphMeshNode(this.meshLoader.loadTexturedQuad(gl, -1.0, -0.5, -1.0, -0.5));
-        const textureNodePositionG = new SceneGraphTextureNode(gBufferNode.positionTarget, gl.TEXTURE0, [quadNodeLowerLeft]);
+        const quadNodeLowerRight = new SceneGraphRenderableNode({ mesh: MeshLoader.loadTexturedQuad(gl, 0.5, 1.0, -1.0, -0.5), textures: [gBufferNode.depthTarget] });
+        const depthShaderNode = new SceneGraphShaderProgramNode(Shaders.makeTextureShader(gl, true), [quadNodeLowerRight]);
 
-        const quadNodeUpperRight = new SceneGraphMeshNode(this.meshLoader.loadTexturedQuad(gl, 0.5, 1.0, 0.5, 1.0));
-        const textureNodeNormalG = new SceneGraphTextureNode(gBufferNode.normalTarget, gl.TEXTURE0, [quadNodeUpperRight]);
-
-        const quadNodeLowerRight = new SceneGraphMeshNode(this.meshLoader.loadTexturedQuad(gl, 0.5, 1.0, -1.0, -0.5));
-        const textureNodeDepthG = new SceneGraphTextureNode(gBufferNode.depthTarget, gl.TEXTURE0, [quadNodeLowerRight]);
-        const depthShaderNode = new SceneGraphShaderProgramNode(this.makeTextureShader(gl, true), [textureNodeDepthG]);
-
-        const quadShaderNode = new SceneGraphShaderProgramNode(this.makeTextureShader(gl), [textureNodeDiffuseG, textureNodePositionG, textureNodeNormalG]);
+        const quadShaderNode = new SceneGraphShaderProgramNode(Shaders.makeTextureShader(gl), [quadNodeUpperLeft, quadNodeLowerLeft, quadNodeUpperRight]);
         const quadTransform = mat4.create();
         const quadTransformNode = new SceneGraphTransformNode(quadTransform, [quadShaderNode, depthShaderNode]);
         const camera2d = new Camera();
@@ -122,148 +136,6 @@ export default class Scene extends React.Component<{}, {}> {
         const rootNode = new SceneGraphNode([cameraNodeMain, cameraNode2d]);
 
         return rootNode;
-    }
-
-    private makeDefaultShader(gl: WebGL2RenderingContext) {
-        const vsSource =
-            `#version 300 es
-            in vec4 aVertexPosition;
-            in vec4 aVertexColor;
-
-            uniform mat4 uWorldMatrix;
-            uniform mat4 uProjectionViewMatrix;
-
-            out lowp vec4 vColor;
-
-            void main() {
-                gl_Position = uProjectionViewMatrix * uWorldMatrix * aVertexPosition;
-                vColor = aVertexColor;
-            }`;
-
-        const fsSource =
-            `#version 300 es
-            precision highp float;
-
-            in lowp vec4 vColor;
-
-            out vec4 fragColor;
-
-            void main() {
-                fragColor = vColor;
-            }`;
-
-        const attributes = [AttributeName.VertexPosition, AttributeName.VertexColor];
-        const uniforms = [UniformName.ProjectionViewMatrix, UniformName.WorldMatrix];
-        return this.shaderMaker.makeShaderProgram(gl, vsSource, fsSource, attributes, uniforms);
-    }
-
-    private makeTextureShader(gl: WebGL2RenderingContext, depthMode: boolean = false) {
-        const vsSource =
-            `#version 300 es
-
-            in vec4 aVertexPosition;
-            in vec2 aTexCoord0;
-
-            uniform mat4 uWorldMatrix;
-            uniform mat4 uProjectionViewMatrix;
-
-            out vec2 vTexCoord0;
-
-            void main() {
-                gl_Position = uProjectionViewMatrix * uWorldMatrix * aVertexPosition;
-                vTexCoord0 = aTexCoord0;
-            }`;
-
-        const fsSource =
-            `#version 300 es
-            precision highp float;
-
-            uniform sampler2D uTextureSampler0;
-
-            in vec2 vTexCoord0;
-
-            out vec4 fragColor;
-
-            void main() {
-                fragColor = texture(uTextureSampler0, vTexCoord0);
-            }`;
-
-        const fsDepthSource =
-            `#version 300 es
-            precision highp float;
-
-            uniform sampler2D uTextureSampler0;
-
-            in vec2 vTexCoord0;
-
-            out vec4 fragColor;
-
-            float LinearizeDepth(in vec2 uv) {
-                float zNear = 0.1;
-                float zFar  = 100.0;
-                float depth = texture(uTextureSampler0, uv).x;
-                return (2.0 * zNear) / (zFar + zNear - depth * (zFar - zNear));
-            }
-
-            void main() {
-                float linearDepthValue = LinearizeDepth(vTexCoord0);
-                fragColor = vec4(linearDepthValue, linearDepthValue, linearDepthValue, 1.0);
-            }`;
-
-        const attributes = [AttributeName.VertexPosition, AttributeName.TexCoord0];
-        const uniforms = [UniformName.ProjectionViewMatrix, UniformName.WorldMatrix, UniformName.TextureSampler0];
-        return this.shaderMaker.makeShaderProgram(gl, vsSource, depthMode ? fsDepthSource : fsSource, attributes, uniforms);
-    }
-
-    private makeGBufferShader(gl: WebGL2RenderingContext) {
-        const vsSource =
-            `#version 300 es
-
-            in vec4 aVertexPosition;
-            in vec4 aVertexColor;
-            in vec3 aVertexNormal;
-            //in vec2 aTexCoord0;
-
-            uniform mat4 uWorldMatrix;
-            uniform mat4 uProjectionViewMatrix;
-
-            //out vec2 vTexCoord0;
-            out vec4 vWorldPosition;
-            out vec4 vDiffuse;
-            out vec4 vNormal;
-
-            void main() {
-                gl_Position = uProjectionViewMatrix * uWorldMatrix * aVertexPosition;
-                vWorldPosition = uWorldMatrix * aVertexPosition;
-                vNormal = uWorldMatrix * vec4(aVertexNormal, 0.0);
-                vDiffuse = aVertexColor;
-                //vTexCoord0 = aTexCoord0;
-            }`;
-
-        const fsSource =
-            `#version 300 es
-            precision highp float;
-
-            //uniform sampler2D uTextureSampler0;
-
-            //in vec2 vTexCoord0;
-            in vec4 vWorldPosition;
-            in vec4 vDiffuse;
-            in vec4 vNormal;
-
-            layout(location=0) out vec4 fragPosition;
-            layout(location=1) out vec4 fragNormal;
-            layout(location=2) out vec4 fragDiffuse;
-
-            void main() {
-                fragPosition = vWorldPosition;
-                fragDiffuse = vDiffuse;
-                fragNormal = vec4(vNormal.xyz, 1.0);
-            }`;
-
-        const attributes = [AttributeName.VertexPosition, AttributeName.VertexColor, AttributeName.VertexNormal];
-        const uniforms = [UniformName.ProjectionViewMatrix, UniformName.WorldMatrix];//, UniformName.TextureSampler0];
-        return this.shaderMaker.makeShaderProgram(gl, vsSource, fsSource, attributes, uniforms);
     }
 
     private createTestTexture(gl: WebGL2RenderingContext): WebGLTexture {
@@ -283,8 +155,8 @@ export default class Scene extends React.Component<{}, {}> {
         const srcType = gl.UNSIGNED_BYTE;
         const pixel = new Uint8Array([0, 0, 255, 255]);
         gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
-                      width, height, border, srcFormat, srcType,
-                      pixel);
+            width, height, border, srcFormat, srcType,
+            pixel);
 
         return texture;
     }
@@ -309,7 +181,7 @@ export default class Scene extends React.Component<{}, {}> {
         const depthTarget = this.createRenderTargetTexture(gl, gl.DEPTH_COMPONENT24);
         gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, depthTarget, 0);
 
-        gl.drawBuffers([ gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1, gl.COLOR_ATTACHMENT2 ]);
+        gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1, gl.COLOR_ATTACHMENT2]);
 
         console.log(gl.checkFramebufferStatus(gl.FRAMEBUFFER));
 

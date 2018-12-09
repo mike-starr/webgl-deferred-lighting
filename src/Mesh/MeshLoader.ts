@@ -4,7 +4,11 @@ import Mesh from "./Mesh";
 
 export default class MeshLoader {
 
-    loadTexturedQuad(gl: WebGL2RenderingContext, left: number, right: number, bottom: number, top: number) {
+    static loadTexturedQuad(gl: WebGL2RenderingContext,
+        left: number,
+        right: number,
+        bottom: number,
+        top: number) {
         const positionBuffer = gl.createBuffer();
         const texCoordBuffer = gl.createBuffer();
         const elementBuffer = gl.createBuffer();
@@ -78,7 +82,7 @@ export default class MeshLoader {
         };
     }
 
-    loadCube(gl: WebGL2RenderingContext, halfExtent: number): Mesh {
+    static loadCube(gl: WebGL2RenderingContext, halfExtent: number): Mesh {
         const positionBuffer = gl.createBuffer();
         const colorBuffer = gl.createBuffer();
         const normalBuffer = gl.createBuffer();
@@ -129,7 +133,7 @@ export default class MeshLoader {
         gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
 
-        const colors = [
+        /*const colors = [
             0.8, 0.0, 0.0,
             0.8, 0.0, 0.0,
             0.8, 0.0, 0.0,
@@ -159,7 +163,12 @@ export default class MeshLoader {
             0.0, 0.6, 0.6,
             0.0, 0.6, 0.6,
             0.0, 0.6, 0.6
-        ];
+        ];*/
+
+        const colors = [];
+        for (let i = 0; i < 72; ++i) {
+            colors.push(0.7);
+        }
 
         gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
