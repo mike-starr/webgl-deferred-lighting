@@ -8,6 +8,7 @@ import SceneGraphLightPassNode from "../scenegraph/SceneGraphLightPassNode";
 import Renderable from "./Renderable";
 import DirectionalLightVolume from "../lighting/DirectionalLightVolume";
 import LightVolume from "../lighting/LightVolume";
+import PointLightVolume from "../lighting/PointLightVolume";
 
 export default class Renderer implements SceneGraphVisitor {
     private worldMatrixStack: mat4[] = [];
@@ -60,7 +61,8 @@ export default class Renderer implements SceneGraphVisitor {
 
         this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
         this.gl.clearDepth(1.0);
-        this.gl.enable(this.gl.DEPTH_TEST);
+        this.gl.disable(this.gl.BLEND);
+        this.gl.enable(this.gl.DEPTH_TEST); this.gl.disable(this.gl.BLEND);
         this.gl.depthFunc(this.gl.LEQUAL);
         this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
         this.gl.enable(this.gl.CULL_FACE);
@@ -74,20 +76,22 @@ export default class Renderer implements SceneGraphVisitor {
         this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
 
         this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
-        this.gl.clearDepth(1.0);
-        this.gl.enable(this.gl.DEPTH_TEST);
-        this.gl.depthFunc(this.gl.LEQUAL);
-        this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
+        this.gl.disable(this.gl.DEPTH_TEST);
+        this.gl.enable(this.gl.BLEND);
+        this.gl.blendFunc(this.gl.ONE, this.gl.ONE);
+        this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+        this.gl.enable(this.gl.CULL_FACE);
     }
 
     endLightPass(): void {
-
+        this.gl.disable(this.gl.BLEND);
     }
 
     renderRenderable(renderable: Renderable) {
-        const mesh = renderable.mesh;
         const currentShader = this.shaderProgramStack[this.shaderProgramStack.length - 1];
         this.gl.useProgram(currentShader.program);
+
+        const mesh = renderable.mesh;
 
         for (const attribute of currentShader.description.attributes) {
             const vertexAttribute = mesh.vertexAttributeMap.get(attribute.name);
@@ -137,20 +141,30 @@ export default class Renderer implements SceneGraphVisitor {
                     this.gl.uniform1i(uniform.location, 2);
                     break;
 
-                case UniformName.LightDirectional_Direction:
-                    this.gl.uniform3fv(uniform.location, (renderable as DirectionalLightVolume).direction);
+                case UniformName.LightDirectional_Color:
+                case UniformName.LightPoint_Color:
+                    this.gl.uniform3fv(uniform.location, (renderable as LightVolume).color);
                     break;
 
-                case UniformName.LightDirectional_Color:
-                    this.gl.uniform3fv(uniform.location, (renderable as LightVolume).color);
+                case UniformName.LightDirectional_AmbientIntensity:
+                case UniformName.LightPoint_AmbientIntensity:
+                    this.gl.uniform1f(uniform.location, (renderable as LightVolume).ambientIntensity);
                     break;
 
                 case UniformName.LightDirectional_Intensity:
                     this.gl.uniform1f(uniform.location, (renderable as DirectionalLightVolume).intensity);
                     break;
 
-                case UniformName.LightDirectional_AmbientIntensity:
-                    this.gl.uniform1f(uniform.location, (renderable as DirectionalLightVolume).ambientIntensity);
+                case UniformName.LightDirectional_Direction:
+                    this.gl.uniform3fv(uniform.location, (renderable as DirectionalLightVolume).direction);
+                    break;
+
+                case UniformName.LightPoint_Intensity:
+                    this.gl.uniform1f(uniform.location, (renderable as PointLightVolume).intensity);
+                    break;
+
+                case UniformName.LightPoint_OneDivRangeSq:
+                    this.gl.uniform1f(uniform.location, (renderable as PointLightVolume).oneDivRangeSq);
                     break;
 
                 default:

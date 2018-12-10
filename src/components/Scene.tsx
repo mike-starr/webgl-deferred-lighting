@@ -7,7 +7,6 @@ import SceneGraphNode from "../scenegraph/SceneGraphNode";
 import SceneGraphCameraNode from "../scenegraph/SceneGraphCameraNode";
 import MeshLoader from "../mesh/MeshLoader";
 import SceneGraphShaderProgramNode from "../scenegraph/SceneGraphShaderProgramNode";
-import ShaderMaker from "../shaders/ShaderMaker";
 import SceneGraphGBufferNode from "../scenegraph/SceneGraphGBufferNode";
 import SceneGraphRenderableNode from "../scenegraph/SceneGraphRenderableNode";
 import Shaders from "../shaders/Shaders";
@@ -20,7 +19,6 @@ export default class Scene extends React.Component<{}, {}> {
     private frameId: number = 0;
     private renderer: Renderer | null = null;
     private sceneGraphRoot: SceneGraphNode | null = null;
-    private shaderMaker: ShaderMaker = new ShaderMaker();
     private cubeWorldTransform: mat4 = mat4.create();
     private lastFrameTime: DOMHighResTimeStamp = 0;
 
@@ -84,9 +82,6 @@ export default class Scene extends React.Component<{}, {}> {
         const cubeNode = new SceneGraphRenderableNode({ mesh: MeshLoader.loadCube(gl, 0.5), textures: [] });
         const cubeNode2 = new SceneGraphRenderableNode({ mesh: MeshLoader.loadCube(gl, 1.5), textures: [] });
 
-
-        Shaders.makeDirectionalLightVolumeShader(gl);
-
         mat4.translate(this.cubeWorldTransform, this.cubeWorldTransform, [0.0, 0.0, -10.0]);
         const cubeTransformNode = new SceneGraphTransformNode(this.cubeWorldTransform, [cubeNode]);
 
@@ -109,14 +104,37 @@ export default class Scene extends React.Component<{}, {}> {
             gBufferNode.diffuseTarget);
         const directionalLightVolumeNode = new SceneGraphRenderableNode(directionalLightVolume);
 
+        const directionalLightVolume2 = LightVolumeLoader.createDirectional(gl,
+            vec3.fromValues(1.0, 1.0, 1.0),
+            vec3.fromValues(1.0, 0.0, -1.0),
+            0.1,
+            0.0,
+            gBufferNode.positionTarget,
+            gBufferNode.normalTarget,
+            gBufferNode.diffuseTarget);
+        const directionalLightVolumeNode2 = new SceneGraphRenderableNode(directionalLightVolume2);
+
         const directionalLightVolumeTransform = mat4.create();
         mat4.fromRotationTranslationScale(directionalLightVolumeTransform, quat.create(), [0.0, 0.0, -50.2], [100.0, 100.0, 100.0]);
-        const directionalLightVolumeTransformNode = new SceneGraphTransformNode(directionalLightVolumeTransform, [directionalLightVolumeNode]);
+        const directionalLightVolumeTransformNode = new SceneGraphTransformNode(directionalLightVolumeTransform, [directionalLightVolumeNode2]);
 
-        const lightPassShaderNode = new SceneGraphShaderProgramNode(Shaders.makeDirectionalLightVolumeShader(gl), [directionalLightVolumeTransformNode])
-        const lightPassNode = new SceneGraphLightPassNode([lightPassShaderNode]);
+        const pointLightVolume = LightVolumeLoader.createPoint(gl, vec3.fromValues(1.0, 0.0, 0.0), 1.0, 0.0, 1.0, gBufferNode.positionTarget, gBufferNode.normalTarget, gBufferNode.diffuseTarget);
+        const pointLightVolumeNode = new SceneGraphRenderableNode(pointLightVolume);
+        const pointLightVolumeTransform = mat4.create();
+        mat4.fromTranslation(pointLightVolumeTransform, [-0.5, 0.0, -9.0]);
+        const pointLightVolumeTransformNode = new SceneGraphTransformNode(pointLightVolumeTransform, [pointLightVolumeNode]);
 
-        const cameraNodeMain = new SceneGraphCameraNode(new Camera(), [/*cubeShaderNode,*/ gBufferNode, lightPassNode]);
+        const pointLightVolume2 = LightVolumeLoader.createPoint(gl, vec3.fromValues(1.0, 0.0, 1.0), 1.0, 0.0, 2.0, gBufferNode.positionTarget, gBufferNode.normalTarget, gBufferNode.diffuseTarget);
+        const pointLightVolumeNode2 = new SceneGraphRenderableNode(pointLightVolume2);
+        const pointLightVolumeTransform2 = mat4.create();
+        mat4.fromTranslation(pointLightVolumeTransform2, [0.5, 0.0, -9.0]);
+        const pointLightVolumeTransformNode2 = new SceneGraphTransformNode(pointLightVolumeTransform2, [pointLightVolumeNode2]);
+
+        const lightPassDirectionalShaderNode = new SceneGraphShaderProgramNode(Shaders.makeDirectionalLightVolumeShader(gl), [directionalLightVolumeTransformNode]);
+        const lightPassPointShaderNode = new SceneGraphShaderProgramNode(Shaders.makePointLightVolumeShader(gl), [pointLightVolumeTransformNode, pointLightVolumeTransformNode2]);
+        const lightPassNode = new SceneGraphLightPassNode([lightPassDirectionalShaderNode, lightPassPointShaderNode]);
+
+        const cameraNodeMain = new SceneGraphCameraNode(new Camera(), [gBufferNode, lightPassNode]);
 
         // 2D overlays
         const quadNodeUpperLeft = new SceneGraphRenderableNode({ mesh: MeshLoader.loadTexturedQuad(gl, -1.0, -0.5, 0.5, 1.0), textures: [gBufferNode.diffuseTarget] });

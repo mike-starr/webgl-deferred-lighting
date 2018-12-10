@@ -1,5 +1,5 @@
 import ShaderProgram from "./ShaderProgram";
-import { AttributeName, UniformName, default as ShaderDescription, AttributeDescription, UniformDescription } from "./ShaderDescription";
+import { AttributeName, UniformName, AttributeDescription, UniformDescription } from "./ShaderDescription";
 
 export default class ShaderMaker {
 

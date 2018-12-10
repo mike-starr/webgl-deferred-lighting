@@ -22,7 +22,13 @@ export enum UniformName {
     LightDirectional_Color = "uLightDirectional.color",
     LightDirectional_Direction = "uLightDirectional.direction",
     LightDirectional_Intensity = "uLightDirectional.intensity",
-    LightDirectional_AmbientIntensity = "uLightDirectional.ambientIntensity"
+    LightDirectional_AmbientIntensity = "uLightDirectional.ambientIntensity",
+
+    // point light
+    LightPoint_Color = "uLightPoint.color",
+    LightPoint_Intensity = "uLightPoint.intensity",
+    LightPoint_OneDivRangeSq = "uLightPoint.oneDivRangeSq",
+    LightPoint_AmbientIntensity = "uLightPoint.ambientIntensity"
 };
 
 export interface UniformDescription {

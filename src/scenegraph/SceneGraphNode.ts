@@ -2,7 +2,7 @@ import SceneGraphVisitor from "./SceneGraphVisitor"
 
 export default class SceneGraphNode {
 
-    constructor(protected readonly children: SceneGraphNode[]) {
+    constructor(public readonly children: SceneGraphNode[]) {
     }
 
     accept(visitor: SceneGraphVisitor): void {

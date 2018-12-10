@@ -167,7 +167,7 @@ export default class MeshLoader {
 
         const colors = [];
         for (let i = 0; i < 72; ++i) {
-            colors.push(0.7);
+            colors.push(1.0);
         }
 
         gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);

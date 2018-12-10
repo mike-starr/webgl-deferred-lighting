@@ -2,7 +2,7 @@ import SceneGraphNode from "./SceneGraphNode";
 import SceneGraphVisitor from "./SceneGraphVisitor";
 import Renderable from "../Renderer/Renderable";
 
-export default class SceneGraphMeshNode extends SceneGraphNode {
+export default class SceneGraphRenderableNode extends SceneGraphNode {
 
     constructor(private readonly renderable: Renderable, children: SceneGraphNode[] = []) {
         super(children);
