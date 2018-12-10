@@ -44,4 +44,5 @@ export default class LightVolumeLoader {
             mesh: MeshLoader.loadCube(gl, range)
         }
     }
+
 }

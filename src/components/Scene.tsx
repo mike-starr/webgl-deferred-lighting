@@ -80,13 +80,13 @@ export default class Scene extends React.Component<{}, {}> {
 
     private createScene(gl: WebGL2RenderingContext): SceneGraphNode {
         const cubeNode = new SceneGraphRenderableNode({ mesh: MeshLoader.loadCube(gl, 0.5), textures: [] });
-        const cubeNode2 = new SceneGraphRenderableNode({ mesh: MeshLoader.loadCube(gl, 1.5), textures: [] });
+        const cubeNode2 = new SceneGraphRenderableNode({ mesh: MeshLoader.loadSphere(gl, 20, 20), textures: [] });
 
         mat4.translate(this.cubeWorldTransform, this.cubeWorldTransform, [0.0, 0.0, -10.0]);
         const cubeTransformNode = new SceneGraphTransformNode(this.cubeWorldTransform, [cubeNode]);
 
         const cube2Transform = mat4.create();
-        mat4.translate(cube2Transform, cube2Transform, [5.0, 5.0, -40.0]);
+        mat4.translate(cube2Transform, cube2Transform, [2.0, 2.0, -10.0]);
         const cube2TransformNode = new SceneGraphTransformNode(cube2Transform, [cubeNode2]);
 
         //const cubeShaderNode = new SceneGraphShaderProgramNode(Shaders.makeDefaultShader(gl), [cube2TransformNode, cubeTransformNode]);
@@ -107,7 +107,7 @@ export default class Scene extends React.Component<{}, {}> {
         const directionalLightVolume2 = LightVolumeLoader.createDirectional(gl,
             vec3.fromValues(1.0, 1.0, 1.0),
             vec3.fromValues(1.0, 0.0, -1.0),
-            0.1,
+            0.2,
             0.0,
             gBufferNode.positionTarget,
             gBufferNode.normalTarget,

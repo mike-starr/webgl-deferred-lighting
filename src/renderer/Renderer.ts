@@ -174,7 +174,7 @@ export default class Renderer implements SceneGraphVisitor {
 
         this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, mesh.indexBufferDescription.buffer);
 
-        this.gl.drawElements(this.gl.TRIANGLES,
+        this.gl.drawElements(mesh.indexBufferDescription.primitiveType,
             mesh.indexBufferDescription.vertexCount,
             mesh.indexBufferDescription.type,
             mesh.indexBufferDescription.offset);
