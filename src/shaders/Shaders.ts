@@ -2,8 +2,6 @@ import ShaderProgram from "./ShaderProgram";
 import { AttributeName, UniformName } from "./ShaderDescription";
 import ShaderMaker from "./ShaderMaker";
 
-// replace with file-based loading, create cache.
-
 export default class Shaders {
 
     static makeVertexColorShader(gl: WebGL2RenderingContext) {

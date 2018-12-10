@@ -1,84 +1,27 @@
-import * as React from "react";
 import { mat4, quat, vec3 } from "gl-matrix";
 import Camera from "../camera/Camera";
-import Renderer from "../renderer/Renderer";
+import Scene from "./Scene";
 import SceneGraphTransformNode from "../scenegraph/SceneGraphTransformNode";
 import SceneGraphNode from "../scenegraph/SceneGraphNode";
 import SceneGraphCameraNode from "../scenegraph/SceneGraphCameraNode";
 import MeshLoader from "../mesh/MeshLoader";
 import SceneGraphShaderProgramNode from "../scenegraph/SceneGraphShaderProgramNode";
-import SceneGraphGBufferNode from "../scenegraph/SceneGraphGBufferNode";
 import SceneGraphRenderableNode from "../scenegraph/SceneGraphRenderableNode";
 import Shaders from "../shaders/Shaders";
 import SceneGraphLightPassNode from "../scenegraph/SceneGraphLightPassNode";
 import LightVolumeLoader from "../lighting/LightVolumeLoader";
 
-export default class Scene extends React.Component<{}, {}> {
-    private readonly canvasElementId = "webgl-canvas";
+export default class BasicScene extends Scene {
 
-    private frameId: number = 0;
-    private renderer: Renderer | null = null;
-    private sceneGraphRoot: SceneGraphNode | null = null;
     private cubeWorldTransform: mat4 = mat4.create();
-    private lastFrameTime: DOMHighResTimeStamp = 0;
+    private rootNode: SceneGraphNode = new SceneGraphNode([]);
 
-    constructor(props: any) {
-        super(props);
+
+    get graphRoot() : SceneGraphNode {
+        return this.rootNode;
     }
 
-    componentDidMount() {
-        const canvas = this.refs[this.canvasElementId] as HTMLCanvasElement;
-        const gl = canvas.getContext('webgl2');
-
-        if (!gl) {
-            throw new Error("Failed to initialize webgl context.");
-        }
-
-        this.sceneGraphRoot = this.createScene(gl);
-        this.renderer = new Renderer(gl);
-        this.start();
-    }
-
-    componentWillUnmount() {
-        this.stop();
-    }
-
-    start() {
-        this.frameId = window.requestAnimationFrame((time) => this.onAnimationFrame(time));
-    }
-
-    stop() {
-        if (this.frameId !== 0) {
-            window.cancelAnimationFrame(this.frameId);
-        }
-    }
-
-    onAnimationFrame(time: DOMHighResTimeStamp) {
-        let frameTime = (1 / 60) * 1000;
-
-        if (this.lastFrameTime > 0) {
-            frameTime = time - this.lastFrameTime;
-        }
-
-        this.lastFrameTime = time;
-
-        mat4.rotateX(this.cubeWorldTransform, this.cubeWorldTransform, (Math.PI / 7000) * frameTime);
-        mat4.rotateY(this.cubeWorldTransform, this.cubeWorldTransform, (Math.PI / 3000) * frameTime);
-        mat4.rotateZ(this.cubeWorldTransform, this.cubeWorldTransform, (Math.PI / 13000) * frameTime);
-
-        this.renderScene();
-        this.frameId = requestAnimationFrame((time) => this.onAnimationFrame(time));
-    }
-
-    renderScene() {
-        (this.renderer as Renderer).render(this.sceneGraphRoot as SceneGraphNode);
-    }
-
-    render() {
-        return <canvas ref={this.canvasElementId} width={800} height={600} />;
-    }
-
-    private createScene(gl: WebGL2RenderingContext): SceneGraphNode {
+    initialize(gl: WebGL2RenderingContext): void {
         const cubeNode = new SceneGraphRenderableNode({ mesh: MeshLoader.loadCube(gl, 0.5), textures: [] });
         const cubeNode2 = new SceneGraphRenderableNode({ mesh: MeshLoader.loadSphere(gl, 20, 20), textures: [] });
 
@@ -88,8 +31,6 @@ export default class Scene extends React.Component<{}, {}> {
         const cube2Transform = mat4.create();
         mat4.translate(cube2Transform, cube2Transform, [2.0, 2.0, -10.0]);
         const cube2TransformNode = new SceneGraphTransformNode(cube2Transform, [cubeNode2]);
-
-        //const cubeShaderNode = new SceneGraphShaderProgramNode(Shaders.makeDefaultShader(gl), [cube2TransformNode, cubeTransformNode]);
 
         const cubeGShaderNode = new SceneGraphShaderProgramNode(Shaders.makeGBufferShader(gl), [cube2TransformNode, cubeTransformNode]);
         const gBufferNode = this.createGBufferNode(gl, [cubeGShaderNode]);
@@ -151,82 +92,14 @@ export default class Scene extends React.Component<{}, {}> {
         camera2d.setProjectionOrthographic(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0);
         const cameraNode2d = new SceneGraphCameraNode(camera2d, [quadTransformNode]);
 
-        const rootNode = new SceneGraphNode([cameraNodeMain, cameraNode2d]);
-
-        return rootNode;
+        this.rootNode = new SceneGraphNode([cameraNodeMain, cameraNode2d]);
     }
 
-    private createTestTexture(gl: WebGL2RenderingContext): WebGLTexture {
-        const texture = gl.createTexture();
-        gl.bindTexture(gl.TEXTURE_2D, texture);
-
-        if (!texture) {
-            throw new Error("Unable to create texture.");
-        }
-
-        const level = 0;
-        const internalFormat = gl.RGBA;
-        const width = 1;
-        const height = 1;
-        const border = 0;
-        const srcFormat = gl.RGBA;
-        const srcType = gl.UNSIGNED_BYTE;
-        const pixel = new Uint8Array([0, 0, 255, 255]);
-        gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
-            width, height, border, srcFormat, srcType,
-            pixel);
-
-        return texture;
+    update(elapsedMs: number): void {
+        mat4.rotateX(this.cubeWorldTransform, this.cubeWorldTransform, (Math.PI / 7000) * elapsedMs);
+        mat4.rotateY(this.cubeWorldTransform, this.cubeWorldTransform, (Math.PI / 3000) * elapsedMs);
+        mat4.rotateZ(this.cubeWorldTransform, this.cubeWorldTransform, (Math.PI / 13000) * elapsedMs);
     }
 
-    private createGBufferNode(gl: WebGL2RenderingContext, children: SceneGraphNode[]): SceneGraphGBufferNode {
-        const frameBuffer = gl.createFramebuffer();
-        if (!frameBuffer) {
-            throw new Error("Failed to create framebuffer.");
-        }
 
-        gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
-
-        const positionTarget = this.createRenderTargetTexture(gl, gl.RGBA32F);
-        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, positionTarget, 0);
-
-        const normalTarget = this.createRenderTargetTexture(gl, gl.RGBA32F);
-        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT1, gl.TEXTURE_2D, normalTarget, 0);
-
-        const diffuseTarget = this.createRenderTargetTexture(gl, gl.RGBA8);
-        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT2, gl.TEXTURE_2D, diffuseTarget, 0);
-
-        const depthTarget = this.createRenderTargetTexture(gl, gl.DEPTH_COMPONENT24);
-        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, depthTarget, 0);
-
-        gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1, gl.COLOR_ATTACHMENT2]);
-
-        console.log(gl.checkFramebufferStatus(gl.FRAMEBUFFER));
-
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
-        return new SceneGraphGBufferNode(frameBuffer,
-            diffuseTarget,
-            positionTarget,
-            normalTarget,
-            depthTarget,
-            children);
-    }
-
-    private createRenderTargetTexture(gl: WebGL2RenderingContext, format: GLenum): WebGLTexture {
-        const texture = gl.createTexture();
-        if (!texture) {
-            throw new Error("Failed to create texture.");
-        }
-
-        gl.bindTexture(gl.TEXTURE_2D, texture);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        gl.texStorage2D(gl.TEXTURE_2D, 1, format, gl.drawingBufferWidth, gl.drawingBufferHeight);
-
-        return texture;
-
-    }
 }

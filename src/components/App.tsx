@@ -1,8 +1,8 @@
 import * as React from "react";
-import Scene from "./Scene";
+import SceneComponent from "./SceneComponent";
 
 export default class App extends React.Component<{}, {}> {
     render() {
-        return <Scene />;
+        return <SceneComponent />;
     }
 }
