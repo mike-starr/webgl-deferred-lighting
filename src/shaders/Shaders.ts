@@ -222,11 +222,11 @@ export default class Shaders {
             uniform sampler2D uTextureSampler2; // diffuse
 
             uniform mat4 uWorldMatrix;
+            uniform mat4 uInverseWorldMatrix;
 
             struct LightPoint {
                 vec3 color;
                 float intensity;
-                float oneDivRangeSq;
                 float ambientIntensity;
             };
 
@@ -242,7 +242,24 @@ export default class Shaders {
 
                 vec4 ambientLightColor = vec4(uLightPoint.color * uLightPoint.ambientIntensity, 1.0f);
 
-                vec3 lightPosition = (uWorldMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+                // The direction is just the surface's position in light space.
+                vec3 lightDirection = (uInverseWorldMatrix * vec4(position, 1.0)).xyz;
+                float lightDistanceSq = dot(lightDirection, lightDirection);
+
+                vec3 normalLightSpace = normalize((uInverseWorldMatrix * vec4(normal, 0.0)).xyz);
+
+                float diffuseFactor = max(0.0, dot(normalLightSpace, normalize(-lightDirection)));
+
+                float attenuation = max(0.0, 1.0 - lightDistanceSq);
+                attenuation *= attenuation;
+
+                vec3 diffuseLightColor = uLightPoint.color * uLightPoint.intensity * diffuseFactor * attenuation;
+
+                fragColor = diffuse * (vec4(diffuseLightColor, 1.0) + ambientLightColor) + vec4(0.0, 0.08, 0.0, 1.0);
+
+
+
+                /*vec3 lightPosition = (uWorldMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
                 vec3 lightDirection = position - lightPosition;
                 float lightDistanceSq = dot(lightDirection, lightDirection);
 
@@ -253,18 +270,18 @@ export default class Shaders {
 
                 vec3 diffuseLightColor = uLightPoint.color * uLightPoint.intensity * diffuseFactor * attenuation;
 
-                fragColor = diffuse * (vec4(diffuseLightColor, 1.0) + ambientLightColor);
+                fragColor = diffuse * (vec4(diffuseLightColor, 1.0) + ambientLightColor)+ vec4(0.0, 0.08, 0.0, 1.0);*/
             }`;
 
         const attributes = [AttributeName.VertexPosition];
         const uniforms = [UniformName.ProjectionViewMatrix,
         UniformName.WorldMatrix,
+        UniformName.InverseWorldMatrix,
         UniformName.TextureSampler0,
         UniformName.TextureSampler1,
         UniformName.TextureSampler2,
         UniformName.LightPoint_Color,
         UniformName.LightPoint_Intensity,
-        UniformName.LightPoint_OneDivRangeSq,
         UniformName.LightPoint_AmbientIntensity];
         return ShaderMaker.makeShaderProgram(gl, vsSource, fsSource, attributes, uniforms);
     }

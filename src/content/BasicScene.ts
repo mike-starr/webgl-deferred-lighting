@@ -65,10 +65,11 @@ export default class BasicScene extends Scene {
         mat4.fromTranslation(pointLightVolumeTransform, [-0.5, 0.0, -9.0]);
         const pointLightVolumeTransformNode = new SceneGraphTransformNode(pointLightVolumeTransform, [pointLightVolumeNode]);
 
-        const pointLightVolume2 = LightVolumeLoader.createPoint(gl, vec3.fromValues(1.0, 0.0, 1.0), 1.0, 0.0, 2.0, gBufferNode.positionTarget, gBufferNode.normalTarget, gBufferNode.diffuseTarget);
+        const pointLightVolume2 = LightVolumeLoader.createPoint(gl, vec3.fromValues(1.0, 0.0, 1.0), 1.0, 0.0, 1.0, gBufferNode.positionTarget, gBufferNode.normalTarget, gBufferNode.diffuseTarget);
         const pointLightVolumeNode2 = new SceneGraphRenderableNode(pointLightVolume2);
         const pointLightVolumeTransform2 = mat4.create();
-        mat4.fromTranslation(pointLightVolumeTransform2, [0.5, 0.0, -9.0]);
+        mat4.fromRotationTranslationScale(pointLightVolumeTransform2, quat.create(), [1.5, 0.0, -9.0], [1.0, 3.0, 2.0]);
+        //mat4.fromTranslation(pointLightVolumeTransform2, [0.5, 0.0, -9.0]);
         const pointLightVolumeTransformNode2 = new SceneGraphTransformNode(pointLightVolumeTransform2, [pointLightVolumeNode2]);
 
         const lightPassDirectionalShaderNode = new SceneGraphShaderProgramNode(Shaders.makeDirectionalLightVolumeShader(gl), [directionalLightVolumeTransformNode]);

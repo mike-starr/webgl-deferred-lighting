@@ -39,9 +39,8 @@ export default class LightVolumeLoader {
             textures: [positionTexture, normalTexture, diffuseTexture],
             color: color,
             intensity: intensity,
-            oneDivRangeSq: 1.0 / (range * range),
             ambientIntensity: ambientIntensity,
-            mesh: MeshLoader.loadCube(gl, range)
+            mesh: MeshLoader.loadSphere(gl, 10, 10)
         }
     }
 

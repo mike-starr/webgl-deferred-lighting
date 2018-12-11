@@ -13,6 +13,7 @@ export interface AttributeDescription {
 export enum UniformName {
     ProjectionViewMatrix = "uProjectionViewMatrix",
     WorldMatrix = "uWorldMatrix",
+    InverseWorldMatrix = "uInverseWorldMatrix",
     TextureSampler0 = "uTextureSampler0",
     TextureSampler1 = "uTextureSampler1",
     TextureSampler2 = "uTextureSampler2",
@@ -27,7 +28,6 @@ export enum UniformName {
     // point light
     LightPoint_Color = "uLightPoint.color",
     LightPoint_Intensity = "uLightPoint.intensity",
-    LightPoint_OneDivRangeSq = "uLightPoint.oneDivRangeSq",
     LightPoint_AmbientIntensity = "uLightPoint.ambientIntensity"
 };
 

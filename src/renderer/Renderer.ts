@@ -123,6 +123,17 @@ export default class Renderer implements SceneGraphVisitor {
                         this.worldMatrixStack[this.worldMatrixStack.length - 1]);
                     break;
 
+                case UniformName.InverseWorldMatrix:
+                    {
+                        const inverseWorldMatrix = mat4.create();
+                        mat4.invert(inverseWorldMatrix, this.worldMatrixStack[this.worldMatrixStack.length - 1]);
+
+                        this.gl.uniformMatrix4fv(uniform.location,
+                            false,
+                            inverseWorldMatrix);
+                    }
+                    break;
+
                 case UniformName.TextureSampler0:
                     this.gl.activeTexture(this.gl.TEXTURE0);
                     this.gl.bindTexture(this.gl.TEXTURE_2D, renderable.textures[0]);
@@ -161,10 +172,6 @@ export default class Renderer implements SceneGraphVisitor {
 
                 case UniformName.LightPoint_Intensity:
                     this.gl.uniform1f(uniform.location, (renderable as PointLightVolume).intensity);
-                    break;
-
-                case UniformName.LightPoint_OneDivRangeSq:
-                    this.gl.uniform1f(uniform.location, (renderable as PointLightVolume).oneDivRangeSq);
                     break;
 
                 default:
