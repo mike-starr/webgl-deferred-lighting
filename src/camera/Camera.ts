@@ -1,4 +1,4 @@
-import { mat4 } from "gl-matrix";
+import { mat4, vec3 } from "gl-matrix";
 
 export default class Camera {
 
@@ -15,6 +15,10 @@ export default class Camera {
         this.projectionMatrix = mat4.create();
         this.viewMatrix = mat4.create();
         this._projectionViewMatrix = mat4.create();
+
+        this.setLookAt(vec3.fromValues(0.0, 0.0, 0.0),
+            vec3.fromValues(0.0, 0.0, -1.0),
+            vec3.fromValues(0.0, 1.0, 0.0));
 
         this.setProjectionPerspective(
             Camera.defaultFieldOfView,
@@ -35,6 +39,11 @@ export default class Camera {
 
     setProjectionPerspective(fov: number, aspectRatio: number, nearZ: number, farZ: number) {
         mat4.perspective(this.projectionMatrix, fov, aspectRatio, nearZ, farZ);
+        this.updateProjectionView();
+    }
+
+    setLookAt(eye: vec3, center: vec3, up: vec3) {
+        mat4.lookAt(this.viewMatrix, eye, center, up);
         this.updateProjectionView();
     }
 

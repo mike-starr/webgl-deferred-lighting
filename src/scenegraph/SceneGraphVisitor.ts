@@ -1,6 +1,6 @@
 import { mat4 } from "gl-matrix";
 import ShaderProgram from "../shaders/ShaderProgram";
-import SceneGraphGBufferNode from "./SceneGraphGBufferNode";
+import SceneGraphGPassNode from "./SceneGraphGPassNode";
 import SceneGraphLightPassNode from "./SceneGraphLightPassNode";
 import Renderable from "../renderer/Renderable";
 
@@ -11,9 +11,10 @@ export default interface SceneGraphVisitor {
     popWorldMatrix(): void;
     pushShaderProgram(shaderProgram: ShaderProgram): void;
     popShaderProgram(): void;
-    beginGBufferPass(node: SceneGraphGBufferNode): void;
-    endGBufferPass(): void;
+    beginGPass(node: SceneGraphGPassNode): void;
+    endGPass(): void;
     beginLightPass(node: SceneGraphLightPassNode): void;
     endLightPass(): void;
-    renderRenderable(renderable: Renderable): void;
+    renderMesh(renderable: Renderable): void;
+    renderLight(renderable: Renderable): void;
 }

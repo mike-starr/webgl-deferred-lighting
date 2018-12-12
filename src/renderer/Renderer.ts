@@ -3,7 +3,7 @@ import SceneGraphVisitor from "../scenegraph/SceneGraphVisitor";
 import SceneGraphNode from "../scenegraph/SceneGraphNode";
 import { UniformName } from "../shaders/ShaderDescription";
 import ShaderProgram from "../shaders/ShaderProgram";
-import SceneGraphGBufferNode from "../scenegraph/SceneGraphGBufferNode";
+import SceneGraphGPassNode from "../scenegraph/SceneGraphGPassNode";
 import SceneGraphLightPassNode from "../scenegraph/SceneGraphLightPassNode";
 import Renderable from "./Renderable";
 import DirectionalLightVolume from "../lighting/DirectionalLightVolume";
@@ -14,6 +14,7 @@ export default class Renderer implements SceneGraphVisitor {
     private worldMatrixStack: mat4[] = [];
     private projectionViewMatrixStack: mat4[] = [];
     private shaderProgramStack: ShaderProgram[] = [];
+    private currentWorldMatrix: mat4 = mat4.create();
 
     constructor(private readonly gl: WebGL2RenderingContext) {
         if (!this.gl.getExtension("EXT_color_buffer_float")) {
@@ -42,10 +43,12 @@ export default class Renderer implements SceneGraphVisitor {
 
     pushWorldMatrix(worldMatrix: mat4): void {
         this.worldMatrixStack.push(worldMatrix);
+        this.updateCurrentWorldMatrix();
     }
 
     popWorldMatrix(): void {
         this.worldMatrixStack.pop();
+        this.updateCurrentWorldMatrix();
     }
 
     pushShaderProgram(shaderProgram: ShaderProgram): void {
@@ -56,7 +59,7 @@ export default class Renderer implements SceneGraphVisitor {
         this.shaderProgramStack.pop();
     }
 
-    beginGBufferPass(node: SceneGraphGBufferNode): void {
+    beginGPass(node: SceneGraphGPassNode): void {
         this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, node.frameBuffer);
 
         this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
@@ -68,7 +71,7 @@ export default class Renderer implements SceneGraphVisitor {
         this.gl.enable(this.gl.CULL_FACE);
     }
 
-    endGBufferPass(): void {
+    endGPass(): void {
         this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
     }
 
@@ -87,11 +90,22 @@ export default class Renderer implements SceneGraphVisitor {
         this.gl.disable(this.gl.BLEND);
     }
 
+    renderLight(renderable: Renderable): void {
+        this.renderRenderable(renderable);
+    }
+
+    renderMesh(renderable: Renderable): void {
+        this.renderRenderable(renderable);
+    }
+
     renderRenderable(renderable: Renderable) {
         const currentShader = this.shaderProgramStack[this.shaderProgramStack.length - 1];
         this.gl.useProgram(currentShader.program);
 
         const mesh = renderable.mesh;
+
+        const worldMatrix = mat4.create();
+        mat4.mul(worldMatrix, this.currentWorldMatrix, renderable.localTransform);
 
         for (const attribute of currentShader.description.attributes) {
             const vertexAttribute = mesh.vertexAttributeMap.get(attribute.name);
@@ -120,13 +134,13 @@ export default class Renderer implements SceneGraphVisitor {
                 case UniformName.WorldMatrix:
                     this.gl.uniformMatrix4fv(uniform.location,
                         false,
-                        this.worldMatrixStack[this.worldMatrixStack.length - 1]);
+                        worldMatrix);
                     break;
 
                 case UniformName.InverseWorldMatrix:
                     {
                         const inverseWorldMatrix = mat4.create();
-                        mat4.invert(inverseWorldMatrix, this.worldMatrixStack[this.worldMatrixStack.length - 1]);
+                        mat4.invert(inverseWorldMatrix, worldMatrix);
 
                         this.gl.uniformMatrix4fv(uniform.location,
                             false,
@@ -185,5 +199,13 @@ export default class Renderer implements SceneGraphVisitor {
             mesh.indexBufferDescription.vertexCount,
             mesh.indexBufferDescription.type,
             mesh.indexBufferDescription.offset);
+    }
+
+    private updateCurrentWorldMatrix() {
+        mat4.identity(this.currentWorldMatrix);
+
+        for (const matrix of this.worldMatrixStack) {
+            mat4.mul(this.currentWorldMatrix, this.currentWorldMatrix, matrix);
+        }
     }
 }
