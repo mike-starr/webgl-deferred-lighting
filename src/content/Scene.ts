@@ -1,14 +1,13 @@
-import { mat4, vec3 } from "gl-matrix";
+import { mat4 } from "gl-matrix";
 import Camera from "../camera/Camera";
 import SceneGraphNode from "../scenegraph/SceneGraphNode";
 import SceneGraphCameraNode from "../scenegraph/SceneGraphCameraNode";
 import SceneGraphGPassNode from "../scenegraph/SceneGraphGPassNode";
-import SceneGraphShaderProgramNode from "../scenegraph/SceneGraphShaderProgramNode";
-import SceneGraphTransformNode from "../scenegraph/SceneGraphTransformNode";
 import SceneGraphMeshNode from "../scenegraph/SceneGraphMeshNode";
 import MeshLoader from "../mesh/MeshLoader";
 import Shaders from "../shaders/Shaders";
-import GBufferTextures from "../renderer/GBufferTextures";
+import GBuffer from "../renderer/GBuffer";
+import SceneGraphNormalPassNode from "../scenegraph/SceneGraphNormalPassNode";
 
 
 export default abstract class Scene {
@@ -19,24 +18,43 @@ export default abstract class Scene {
 
     abstract update(elapsedMs: number): void;
 
-    protected createOverlayNode(gl: WebGL2RenderingContext, gBufferTextures: GBufferTextures): SceneGraphNode {
-        const quadNodeUpperLeft = new SceneGraphMeshNode({ mesh: MeshLoader.loadTexturedQuad(gl, -1.0, -0.5, 0.5, 1.0), localTransform: mat4.create(), textures: [gBufferTextures.diffuseTexture] });
-        const quadNodeLowerLeft = new SceneGraphMeshNode({ mesh: MeshLoader.loadTexturedQuad(gl, -1.0, -0.5, -1.0, -0.5), localTransform: mat4.create(), textures: [gBufferTextures.positionTexture] });
-        const quadNodeUpperRight = new SceneGraphMeshNode({ mesh: MeshLoader.loadTexturedQuad(gl, 0.5, 1.0, 0.5, 1.0), localTransform: mat4.create(), textures: [gBufferTextures.normalTexture] });
+    protected createOverlayNode(gl: WebGL2RenderingContext, gBufferTextures: GBuffer): SceneGraphNode {
+        const texturedShader = Shaders.makeTextureShader(gl);
+        const texturedDepthShader = Shaders.makeTextureShader(gl, true);
 
-        const quadNodeLowerRight = new SceneGraphMeshNode({ mesh: MeshLoader.loadTexturedQuad(gl, 0.5, 1.0, -1.0, -0.5), localTransform: mat4.create(), textures: [gBufferTextures.depthTexture] });
-        const depthShaderNode = new SceneGraphShaderProgramNode(Shaders.makeTextureShader(gl, true), [quadNodeLowerRight]);
+        const quadNodeUpperLeft = new SceneGraphMeshNode({
+            mesh: MeshLoader.loadTexturedQuad(gl, -1.0, -0.5, 0.5, 1.0),
+            localTransform: mat4.create(),
+            textures: [gBufferTextures.diffuseTexture],
+            shaderProgram: texturedShader
+        });
+        const quadNodeLowerLeft = new SceneGraphMeshNode({
+            mesh: MeshLoader.loadTexturedQuad(gl, -1.0, -0.5, -1.0, -0.5),
+            localTransform: mat4.create(),
+            textures: [gBufferTextures.positionTexture],
+            shaderProgram: texturedShader
+        });
+        const quadNodeUpperRight = new SceneGraphMeshNode({
+            mesh: MeshLoader.loadTexturedQuad(gl, 0.5, 1.0, 0.5, 1.0),
+            localTransform: mat4.create(),
+            textures: [gBufferTextures.normalTexture],
+            shaderProgram: texturedShader
+        });
+        const quadNodeLowerRight = new SceneGraphMeshNode({
+            mesh: MeshLoader.loadTexturedQuad(gl, 0.5, 1.0, -1.0, -0.5),
+            localTransform: mat4.create(),
+            textures: [gBufferTextures.depthTexture],
+            shaderProgram: texturedDepthShader
+        });
 
-        const quadShaderNode = new SceneGraphShaderProgramNode(Shaders.makeTextureShader(gl), [quadNodeUpperLeft, quadNodeLowerLeft, quadNodeUpperRight]);
-        const quadTransform = mat4.create();
-        const quadTransformNode = new SceneGraphTransformNode(quadTransform, [quadShaderNode, depthShaderNode]);
         const camera2d = new Camera();
         camera2d.setProjectionOrthographic(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0);
 
-        return new SceneGraphCameraNode(camera2d, [quadTransformNode]);
+        const cameraNode = new SceneGraphCameraNode(camera2d, [quadNodeUpperLeft, quadNodeLowerLeft, quadNodeUpperRight, quadNodeLowerRight]);
+        return new SceneGraphNormalPassNode([cameraNode]);
     }
 
-    protected createGBufferNode(gl: WebGL2RenderingContext, children: SceneGraphNode[]): SceneGraphGPassNode {
+    /*protected createGBufferNode(gl: WebGL2RenderingContext, children: SceneGraphNode[]): SceneGraphGPassNode {
         const frameBuffer = gl.createFramebuffer();
         if (!frameBuffer) {
             throw new Error("Failed to create framebuffer.");
@@ -58,15 +76,14 @@ export default abstract class Scene {
 
         gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1, gl.COLOR_ATTACHMENT2]);
 
-        console.log(gl.checkFramebufferStatus(gl.FRAMEBUFFER));
-
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
-        return new SceneGraphGPassNode(frameBuffer, {
+        return new SceneGraphGPassNode( {frameBuffer: frameBuffer,
             diffuseTexture: diffuseTarget,
             positionTexture: positionTarget,
             normalTexture: normalTarget,
-            depthTexture: depthTarget},
+            depthTexture: depthTarget
+        },
             children);
     }
 
@@ -84,7 +101,7 @@ export default abstract class Scene {
         gl.texStorage2D(gl.TEXTURE_2D, 1, format, gl.drawingBufferWidth, gl.drawingBufferHeight);
 
         return texture;
-    }
+    }*/
 
     protected createTestTexture(gl: WebGL2RenderingContext): WebGLTexture {
         const texture = gl.createTexture();

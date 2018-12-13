@@ -1,11 +1,10 @@
 import SceneGraphNode from "./SceneGraphNode";
 import SceneGraphVisitor from "./SceneGraphVisitor";
-import GBufferTextures from "../renderer/GBufferTextures";
+import GBuffer from "../renderer/GBuffer";
 
 export default class SceneGraphGPassNode extends SceneGraphNode {
 
-    constructor(public readonly frameBuffer: WebGLFramebuffer,
-        public readonly gBufferTextures: GBufferTextures,
+    constructor(public readonly gBuffer: GBuffer,
         children: SceneGraphNode[] = []) {
         super(children);
     }

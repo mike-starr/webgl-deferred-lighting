@@ -15,6 +15,8 @@ export default interface SceneGraphVisitor {
     endGPass(): void;
     beginLightPass(node: SceneGraphLightPassNode): void;
     endLightPass(): void;
+    beginNormalPass(): void;
+    endNormalPass(): void;
     renderMesh(renderable: Renderable): void;
     renderLight(renderable: Renderable): void;
 }

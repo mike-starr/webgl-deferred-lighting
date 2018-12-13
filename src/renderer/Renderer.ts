@@ -6,20 +6,61 @@ import ShaderProgram from "../shaders/ShaderProgram";
 import SceneGraphGPassNode from "../scenegraph/SceneGraphGPassNode";
 import SceneGraphLightPassNode from "../scenegraph/SceneGraphLightPassNode";
 import Renderable from "./Renderable";
+import GBuffer from "./GBuffer";
 import DirectionalLightVolume from "../lighting/DirectionalLightVolume";
 import LightVolume from "../lighting/LightVolume";
 import PointLightVolume from "../lighting/PointLightVolume";
+
+enum PassType {
+    None,
+    GPass,
+    LightPass,
+    NormalPass
+}
 
 export default class Renderer implements SceneGraphVisitor {
     private worldMatrixStack: mat4[] = [];
     private projectionViewMatrixStack: mat4[] = [];
     private shaderProgramStack: ShaderProgram[] = [];
     private currentWorldMatrix: mat4 = mat4.create();
+    private passType: PassType = PassType.None;
 
     constructor(private readonly gl: WebGL2RenderingContext) {
         if (!this.gl.getExtension("EXT_color_buffer_float")) {
             throw new Error("Extension EXT_color_buffer_float is not available.");
         }
+    }
+
+    static createGBuffer(gl: WebGL2RenderingContext): GBuffer {
+        const frameBuffer = gl.createFramebuffer();
+        if (!frameBuffer) {
+            throw new Error("Failed to create framebuffer.");
+        }
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
+
+        const positionTarget = this.createRenderTargetTexture(gl, gl.RGBA32F);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, positionTarget, 0);
+
+        const normalTarget = this.createRenderTargetTexture(gl, gl.RGBA32F);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT1, gl.TEXTURE_2D, normalTarget, 0);
+
+        const diffuseTarget = this.createRenderTargetTexture(gl, gl.RGBA8);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT2, gl.TEXTURE_2D, diffuseTarget, 0);
+
+        const depthTarget = this.createRenderTargetTexture(gl, gl.DEPTH_COMPONENT24);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, depthTarget, 0);
+
+        gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1, gl.COLOR_ATTACHMENT2]);
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+        return {frameBuffer: frameBuffer,
+            diffuseTexture: diffuseTarget,
+            positionTexture: positionTarget,
+            normalTexture: normalTarget,
+            depthTexture: depthTarget
+        };
     }
 
     render(sceneGraphRoot: SceneGraphNode): void {
@@ -43,12 +84,10 @@ export default class Renderer implements SceneGraphVisitor {
 
     pushWorldMatrix(worldMatrix: mat4): void {
         this.worldMatrixStack.push(worldMatrix);
-        this.updateCurrentWorldMatrix();
     }
 
     popWorldMatrix(): void {
         this.worldMatrixStack.pop();
-        this.updateCurrentWorldMatrix();
     }
 
     pushShaderProgram(shaderProgram: ShaderProgram): void {
@@ -60,12 +99,18 @@ export default class Renderer implements SceneGraphVisitor {
     }
 
     beginGPass(node: SceneGraphGPassNode): void {
-        this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, node.frameBuffer);
+        if (this.passType !== PassType.None) {
+            throw new Error("Can't start a render pass while in another pass.")
+        }
+
+        this.passType = PassType.GPass;
+
+        this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, node.gBuffer.frameBuffer);
 
         this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
         this.gl.clearDepth(1.0);
         this.gl.disable(this.gl.BLEND);
-        this.gl.enable(this.gl.DEPTH_TEST); this.gl.disable(this.gl.BLEND);
+        this.gl.enable(this.gl.DEPTH_TEST);
         this.gl.depthFunc(this.gl.LEQUAL);
         this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
         this.gl.enable(this.gl.CULL_FACE);
@@ -73,9 +118,17 @@ export default class Renderer implements SceneGraphVisitor {
 
     endGPass(): void {
         this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
+
+        this.passType = PassType.None;
     }
 
     beginLightPass(node: SceneGraphLightPassNode): void {
+        if (this.passType !== PassType.None) {
+            throw new Error("Can't start a render pass while in another pass.")
+        }
+
+        this.passType = PassType.LightPass;
+
         this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
 
         this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
@@ -88,18 +141,43 @@ export default class Renderer implements SceneGraphVisitor {
 
     endLightPass(): void {
         this.gl.disable(this.gl.BLEND);
+
+        this.passType = PassType.None;
+    }
+
+    beginNormalPass(): void {
+        if (this.passType !== PassType.None) {
+            throw new Error("Can't start a render pass while in another pass.")
+        }
+
+        this.passType = PassType.NormalPass;
+    }
+
+    endNormalPass(): void {
+        this.passType = PassType.None;
     }
 
     renderLight(renderable: Renderable): void {
+        if (this.passType !== PassType.LightPass) {
+            return;
+        }
+
         this.renderRenderable(renderable);
     }
 
     renderMesh(renderable: Renderable): void {
+        if (!(this.passType === PassType.GPass ||
+            this.passType === PassType.NormalPass)) {
+            return;
+        }
+
         this.renderRenderable(renderable);
     }
 
-    renderRenderable(renderable: Renderable) {
-        const currentShader = this.shaderProgramStack[this.shaderProgramStack.length - 1];
+    private renderRenderable(renderable: Renderable) {
+        this.updateCurrentWorldMatrix();
+
+        const currentShader = renderable.shaderProgram;
         this.gl.useProgram(currentShader.program);
 
         const mesh = renderable.mesh;
@@ -207,5 +285,21 @@ export default class Renderer implements SceneGraphVisitor {
         for (const matrix of this.worldMatrixStack) {
             mat4.mul(this.currentWorldMatrix, this.currentWorldMatrix, matrix);
         }
+    }
+
+    private static createRenderTargetTexture(gl: WebGL2RenderingContext, format: GLenum): WebGLTexture {
+        const texture = gl.createTexture();
+        if (!texture) {
+            throw new Error("Failed to create texture.");
+        }
+
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texStorage2D(gl.TEXTURE_2D, 1, format, gl.drawingBufferWidth, gl.drawingBufferHeight);
+
+        return texture;
     }
 }

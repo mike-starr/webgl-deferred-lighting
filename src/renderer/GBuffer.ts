@@ -1,4 +1,5 @@
-export default interface GBufferTextures {
+export default interface GBuffer {
+    frameBuffer: WebGLFramebuffer,
     positionTexture: WebGLTexture;
     diffuseTexture: WebGLTexture;
     normalTexture: WebGLTexture;
