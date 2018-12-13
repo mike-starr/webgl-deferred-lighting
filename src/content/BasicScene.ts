@@ -19,7 +19,7 @@ export default class BasicScene extends Scene {
     private pointLight2Transform: mat4 = mat4.create();
     private rootNode: SceneGraphNode = new SceneGraphNode([]);
 
-    get graphRoot() : SceneGraphNode {
+    get graphRoot(): SceneGraphNode {
         return this.rootNode;
     }
 

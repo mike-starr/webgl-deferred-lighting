@@ -9,8 +9,8 @@ export default class SceneComponent extends React.Component<{}, {}> {
 
     private frameId: number = 0;
     private renderer: Renderer | null = null;
-    //private scene: Scene = new HolidayScene();
-    private scene: Scene = new BasicScene();
+    private scene: Scene = new HolidayScene();
+    //private scene: Scene = new BasicScene();
     private lastFrameTime: DOMHighResTimeStamp = 0;
 
     constructor(props: any) {
@@ -63,6 +63,6 @@ export default class SceneComponent extends React.Component<{}, {}> {
     }
 
     render() {
-        return <canvas ref={this.canvasElementId} width={800} height={600} />;
+        return <canvas ref={this.canvasElementId} width={1280} height={720} />;
     }
 }

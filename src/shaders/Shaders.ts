@@ -255,7 +255,7 @@ export default class Shaders {
 
                 vec3 diffuseLightColor = uLightPoint.color * uLightPoint.intensity * diffuseFactor * attenuation;
 
-                fragColor = diffuse * (vec4(diffuseLightColor, 1.0) + ambientLightColor) + vec4(0.0, 0.08, 0.0, 1.0);
+                fragColor = diffuse * (vec4(diffuseLightColor, 1.0) + ambientLightColor);// + vec4(0.0, 0.08, 0.0, 1.0);
 
 
 

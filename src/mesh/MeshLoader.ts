@@ -1,6 +1,7 @@
 import { AttributeName } from "../shaders/ShaderDescription";
 import MeshVertexAttribute from "./MeshVertexAttribute";
 import Mesh from "./Mesh";
+import { vec3 } from "gl-matrix";
 
 export default class MeshLoader {
 
@@ -83,7 +84,10 @@ export default class MeshLoader {
         };
     }
 
-    static loadCube(gl: WebGL2RenderingContext, halfExtent: number): Mesh {
+    static loadCube(gl: WebGL2RenderingContext,
+        halfExtent: number,
+        color: vec3 = vec3.fromValues(1.0, 1.0, 1.0),
+        pyramidMode: boolean = false): Mesh {
         const positionBuffer = gl.createBuffer();
         const colorBuffer = gl.createBuffer();
         const normalBuffer = gl.createBuffer();
@@ -93,24 +97,26 @@ export default class MeshLoader {
             throw new Error("Unable to create buffer.");
         }
 
+        const pyramidAdjuster = pyramidMode ? 0.0 : 1;
+
         const vertices = [
             // Front face.
             -halfExtent, -halfExtent, halfExtent,
             halfExtent, -halfExtent, halfExtent,
-            halfExtent, halfExtent, halfExtent,
-            -halfExtent, halfExtent, halfExtent,
+            halfExtent * pyramidAdjuster, halfExtent, halfExtent * pyramidAdjuster,
+            -halfExtent * pyramidAdjuster, halfExtent, halfExtent * pyramidAdjuster,
 
             // Back face.
             halfExtent, -halfExtent, -halfExtent,
             -halfExtent, -halfExtent, -halfExtent,
-            -halfExtent, halfExtent, -halfExtent,
-            halfExtent, halfExtent, -halfExtent,
+            -halfExtent * pyramidAdjuster, halfExtent, -halfExtent * pyramidAdjuster,
+            halfExtent * pyramidAdjuster, halfExtent, -halfExtent * pyramidAdjuster,
 
             // Top face.
-            -halfExtent, halfExtent, halfExtent,
-            halfExtent, halfExtent, halfExtent,
-            halfExtent, halfExtent, -halfExtent,
-            -halfExtent, halfExtent, -halfExtent,
+            -halfExtent * pyramidAdjuster, halfExtent, halfExtent * pyramidAdjuster,
+            halfExtent * pyramidAdjuster, halfExtent, halfExtent * pyramidAdjuster,
+            halfExtent * pyramidAdjuster, halfExtent, -halfExtent * pyramidAdjuster,
+            -halfExtent * pyramidAdjuster, halfExtent, -halfExtent * pyramidAdjuster,
 
             // Bottom face.
             halfExtent, -halfExtent, halfExtent,
@@ -120,55 +126,23 @@ export default class MeshLoader {
 
             // Left face.
             -halfExtent, -halfExtent, halfExtent,
-            -halfExtent, halfExtent, halfExtent,
-            -halfExtent, halfExtent, -halfExtent,
+            -halfExtent * pyramidAdjuster, halfExtent, halfExtent * pyramidAdjuster,
+            -halfExtent * pyramidAdjuster, halfExtent, -halfExtent * pyramidAdjuster,
             -halfExtent, -halfExtent, -halfExtent,
 
             // Right face.
             halfExtent, -halfExtent, -halfExtent,
-            halfExtent, halfExtent, -halfExtent,
-            halfExtent, halfExtent, halfExtent,
+            halfExtent * pyramidAdjuster, halfExtent, -halfExtent * pyramidAdjuster,
+            halfExtent * pyramidAdjuster, halfExtent, halfExtent * pyramidAdjuster,
             halfExtent, -halfExtent, halfExtent,
         ];
 
         gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
 
-        /*const colors = [
-            0.8, 0.0, 0.0,
-            0.8, 0.0, 0.0,
-            0.8, 0.0, 0.0,
-            0.8, 0.0, 0.0,
-
-            0.0, 0.8, 0.0,
-            0.0, 0.8, 0.0,
-            0.0, 0.8, 0.0,
-            0.0, 0.8, 0.0,
-
-            0.0, 0.0, 0.8,
-            0.0, 0.0, 0.8,
-            0.0, 0.0, 0.8,
-            0.0, 0.0, 0.8,
-
-            0.6, 0.6, 0.0,
-            0.6, 0.6, 0.0,
-            0.6, 0.6, 0.0,
-            0.6, 0.6, 0.0,
-
-            0.6, 0.0, 0.6,
-            0.6, 0.0, 0.6,
-            0.6, 0.0, 0.6,
-            0.6, 0.0, 0.6,
-
-            0.0, 0.6, 0.6,
-            0.0, 0.6, 0.6,
-            0.0, 0.6, 0.6,
-            0.0, 0.6, 0.6
-        ];*/
-
         const colors = [];
         for (let i = 0; i < 72; ++i) {
-            colors.push(1.0);
+            colors.push(...color);
         }
 
         gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);

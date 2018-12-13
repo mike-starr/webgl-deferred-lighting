@@ -3,7 +3,7 @@ import { mat4, vec3 } from "gl-matrix";
 export default class Camera {
 
     private static readonly defaultFieldOfView = 45 * Math.PI / 180;
-    private static readonly defaultAspectRatio = 4 / 3;
+    private static readonly defaultAspectRatio = 1280 / 720;
     private static readonly defaultNearZ = 0.1;
     private static readonly defaultFarZ = 100.0;
 
