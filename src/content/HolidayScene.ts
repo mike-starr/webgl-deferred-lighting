@@ -17,6 +17,7 @@ import DirectionalLightVolume from "../lighting/DirectionalLightVolume";
 import SceneGraphLightPassNode from "../scenegraph/SceneGraphLightPassNode";
 import Mesh from "../Mesh/Mesh";
 import PointLightVolume from "../lighting/PointLightVolume";
+import RotationAnimation from "./RotationAnimation";
 
 export default class HolidayScene extends Scene {
 
@@ -27,6 +28,7 @@ export default class HolidayScene extends Scene {
     private pointLightShader: ShaderProgram | null = null;
     private gBuffer: GBuffer | null = null;
     private lightPassTextures: WebGLTexture[] = [];
+    private pointLightSphere: Mesh | null = null;
 
     get graphRoot(): SceneGraphNode {
         return this.rootNode;
@@ -37,14 +39,18 @@ export default class HolidayScene extends Scene {
         this.directionalLightShader = Shaders.makeDirectionalLightVolumeShader(gl);
         this.pointLightShader = Shaders.makePointLightVolumeShader(gl);
         this.gBuffer = Renderer.createGBuffer(gl);
+        this.pointLightSphere = MeshLoader.loadSphere(gl, 10, 10);
         this.lightPassTextures = [this.gBuffer.positionTexture, this.gBuffer.normalTexture, this.gBuffer.diffuseTexture];
-
 
         const room = this.makeRoom(gl);
         const tree = this.makeTree(gl);
 
-        const treeTransform = mat4.create();
-
+        const pointLight = this.makePointLight(gl, 0.5, vec3.fromValues(1.0, 0.0, 0.0), 1.0);
+        const orbit = this.makeOrbit(2.0, [pointLight, pointLight, pointLight,pointLight,pointLight,pointLight]);
+        const orbitTransform = mat4.create();
+        mat4.translate(orbitTransform, orbitTransform, [0.0, 0.2, 0.0]);
+        this.animations.push(new RotationAnimation(orbitTransform, Math.PI / 4));
+        const orbitTransformNode = new SceneGraphTransformNode(orbitTransform, [orbit]);
 
         const directionalLightVolumeTransform = mat4.create();
         mat4.fromRotationTranslationScale(directionalLightVolumeTransform, quat.create(), [0.0, 0.0, 0.0], [100.0, 100.0, 7.0]);
@@ -60,22 +66,22 @@ export default class HolidayScene extends Scene {
             shaderProgram: this.directionalLightShader
         });
 
-        const pointLightVolumeTransform = mat4.create();
+        /*const pointLightVolumeTransform = mat4.create();
 
         mat4.fromRotationTranslationScale(pointLightVolumeTransform, quat.create(), [-0.0, 3.5, 1.0], [5.5, 5.5, 5.5]);
 
         const pointLightVolumeNode = new SceneGraphLightNode(<PointLightVolume> {
             color: vec3.fromValues(1.0, 0.8, 0.2),
-            intensity: 1.0,
+            intensity: 0.0,
             ambientIntensity: 0.0,
             mesh: MeshLoader.loadSphere(gl, 10, 10),
             localTransform: pointLightVolumeTransform,
             textures: this.lightPassTextures,
             shaderProgram: this.pointLightShader
-        });
+        });*/
 
         const rootTransform = mat4.create();
-        const rootTransformNode = new SceneGraphTransformNode(rootTransform, [room, tree, directionalLightVolumeNode, pointLightVolumeNode]);
+        const rootTransformNode = new SceneGraphTransformNode(rootTransform, [room, tree, orbitTransformNode, directionalLightVolumeNode]);
 
         const mainCamera = new Camera();
         mainCamera.setLookAt(vec3.fromValues(0.0, 2.5, 8.0), vec3.fromValues(0.0, 1.5, -4.0), vec3.fromValues(0.0, 1.0, 0.0));
@@ -90,7 +96,7 @@ export default class HolidayScene extends Scene {
     }
 
     update(elapsedMs: number): void {
-
+        super.update(elapsedMs);
     }
 
     private makeRoom(gl: WebGL2RenderingContext): SceneGraphNode {
@@ -141,7 +147,109 @@ export default class HolidayScene extends Scene {
         mat4.fromRotationTranslationScale(treeTransform2, treeRot, [0.0, (treeHeight / 2.0) + stumpHeight, 0.0], [treeWidth, treeHeight, treeWidth]);
         const treeNode2 = new SceneGraphMeshNode(this.makeCubeRenderable(treeTransform2, greenCube));
 
-        return new SceneGraphNode([stumpNode, treeNode, treeNode2]);
+        const starNode = this.makeStar(gl);
+        const starTransform = mat4.create();
+        const starRot = quat.create();
+        quat.fromEuler(starRot, 0.0, 22.5, 0.0);
+        mat4.fromRotationTranslation(starTransform, starRot, [0.0, treeHeight + stumpHeight + 0.04, 0.0]);
+
+        return new SceneGraphNode([stumpNode, treeNode, treeNode2, new SceneGraphTransformNode(starTransform, [starNode])]);
+    }
+
+    private makeStar(gl: WebGL2RenderingContext) {
+        const goldPyramid = MeshLoader.loadCube(gl, 0.5, vec3.fromValues(.81, .71, .23), true);
+
+        const pointHeight = 0.17;
+        const baseWidth = 0.06;
+
+        const bottomTransform = mat4.create();
+        const bottomRot = quat.create();
+        quat.fromEuler(bottomRot, 180.0, 0.0, 0.0);
+        mat4.fromRotationTranslationScale(bottomTransform, bottomRot, [0.0, -pointHeight / 2.0, 0.0], [baseWidth, pointHeight, baseWidth]);
+
+        const topTransform = mat4.create();
+        mat4.fromRotationTranslationScale(topTransform, quat.create(), [0.0, 0.5 * pointHeight + baseWidth, 0.0], [baseWidth, pointHeight, baseWidth]);
+
+        const leftTransform = mat4.create();
+        const leftRot = quat.create();
+        quat.fromEuler(leftRot, 0.0, 0.0, 90.0);
+        mat4.fromRotationTranslationScale(leftTransform, leftRot, [-(baseWidth + pointHeight) / 2.0, baseWidth / 2.0, 0.0], [baseWidth, pointHeight, baseWidth]);
+
+        const rightTransform = mat4.create();
+        const rightRot = quat.create();
+        quat.fromEuler(rightRot, 0.0, 0.0, -90.0);
+        mat4.fromRotationTranslationScale(rightTransform, rightRot, [(baseWidth + pointHeight) / 2.0, baseWidth / 2.0, 0.0], [baseWidth, pointHeight, baseWidth]);
+
+        const backTransform = mat4.create();
+        const backRot = quat.create();
+        quat.fromEuler(backRot, -90.0, 0.0, 0.0);
+        mat4.fromRotationTranslationScale(backTransform, backRot, [0.0, baseWidth / 2.0, -(baseWidth + pointHeight) / 2.0], [baseWidth, pointHeight, baseWidth]);
+
+        const frontTransform = mat4.create();
+        const frontRot = quat.create();
+        quat.fromEuler(frontRot, 90.0, 0.0, 0.0);
+        mat4.fromRotationTranslationScale(frontTransform, frontRot, [0.0, baseWidth / 2.0, (baseWidth + pointHeight) / 2.0], [baseWidth, pointHeight, baseWidth]);
+
+        const bottomNode = new SceneGraphMeshNode(this.makeCubeRenderable(bottomTransform, goldPyramid));
+        const topNode = new SceneGraphMeshNode(this.makeCubeRenderable(topTransform, goldPyramid));
+        const leftNode = new SceneGraphMeshNode(this.makeCubeRenderable(leftTransform, goldPyramid));
+        const rightNode = new SceneGraphMeshNode(this.makeCubeRenderable(rightTransform, goldPyramid));
+        const backNode = new SceneGraphMeshNode(this.makeCubeRenderable(backTransform, goldPyramid));
+        const frontNode = new SceneGraphMeshNode(this.makeCubeRenderable(frontTransform, goldPyramid));
+
+        const pointLight = this.makePointLight(gl, 0.3, vec3.fromValues(1.0, 1.0, 1.0), 1.0);
+        const orbit = this.makeOrbit(0.15, [pointLight, pointLight, pointLight]);
+        const orbitTransform = mat4.create();
+        mat4.translate(orbitTransform, orbitTransform, [0.0, 0.1, 0.0]);
+        this.animations.push(new RotationAnimation(orbitTransform, Math.PI / 2));
+        const orbitTransformNode = new SceneGraphTransformNode(orbitTransform, [orbit]);
+
+        return new SceneGraphNode([bottomNode, topNode, leftNode, rightNode, backNode, frontNode, orbitTransformNode]);
+    }
+
+    private makePointLight(gl: WebGL2RenderingContext, radius: number, color: vec3, intensity: number): SceneGraphNode {
+        const emitterRadiusScale = 0.05;
+        const pointLightTransform = mat4.create();
+        mat4.fromScaling(pointLightTransform, [radius, radius, radius]);
+
+        const pointLightVolumeNode = new SceneGraphLightNode(<PointLightVolume> {
+            color: color,
+            intensity: intensity,
+            ambientIntensity: 0.0,
+            mesh: this.pointLightSphere as Mesh,
+            localTransform: mat4.create(),
+            textures: this.lightPassTextures,
+            shaderProgram: this.pointLightShader
+        });
+
+        const emitterTransform = mat4.create();
+        mat4.fromScaling(emitterTransform, [emitterRadiusScale, emitterRadiusScale, emitterRadiusScale]);
+
+        const emitterSphere = {
+            mesh: MeshLoader.loadSphere(gl, 10, 10, color),
+            localTransform: emitterTransform,
+            textures: [],
+            shaderProgram: this.gPassShader as ShaderProgram
+        }
+
+        return new SceneGraphTransformNode(pointLightTransform, [pointLightVolumeNode, new SceneGraphMeshNode(emitterSphere)]);
+    }
+
+    private makeOrbit(radius: number, nodes: SceneGraphNode[]): SceneGraphNode {
+        const angleIncrement = 2 * Math.PI / nodes.length;
+        const transformNodes = [];
+
+        let angle = 0;
+
+        for (let i = 0; i < nodes.length; ++i) {
+            angle = i * angleIncrement;
+
+            const transform = mat4.create();
+            mat4.fromTranslation(transform, [Math.cos(angle) * radius, 0.0, Math.sin(angle) * radius]);
+            transformNodes.push(new SceneGraphTransformNode(transform, [nodes[i]]));
+        }
+
+        return new SceneGraphNode(transformNodes);
     }
 
     private makeCubeRenderable(transform: mat4, mesh: Mesh) {

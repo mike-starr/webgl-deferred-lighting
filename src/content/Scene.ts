@@ -2,7 +2,7 @@ import { mat4 } from "gl-matrix";
 import Camera from "../camera/Camera";
 import SceneGraphNode from "../scenegraph/SceneGraphNode";
 import SceneGraphCameraNode from "../scenegraph/SceneGraphCameraNode";
-import SceneGraphGPassNode from "../scenegraph/SceneGraphGPassNode";
+import Animation from "./Animation";
 import SceneGraphMeshNode from "../scenegraph/SceneGraphMeshNode";
 import MeshLoader from "../mesh/MeshLoader";
 import Shaders from "../shaders/Shaders";
@@ -12,11 +12,17 @@ import SceneGraphNormalPassNode from "../scenegraph/SceneGraphNormalPassNode";
 
 export default abstract class Scene {
 
+    protected animations: Animation[] = [];
+
     abstract get graphRoot(): SceneGraphNode;
 
     abstract initialize(gl: WebGL2RenderingContext): void;
 
-    abstract update(elapsedMs: number): void;
+    update(elapsedMs: number): void {
+        for (const animation of this.animations) {
+            animation.update(elapsedMs);
+        }
+    }
 
     protected createOverlayNode(gl: WebGL2RenderingContext, gBufferTextures: GBuffer): SceneGraphNode {
         const texturedShader = Shaders.makeTextureShader(gl);

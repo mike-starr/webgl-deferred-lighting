@@ -262,7 +262,7 @@ export default class MeshLoader {
         };
     }
 
-    static loadSphere(gl: WebGL2RenderingContext, stacks: number, slices: number): Mesh {
+    static loadSphere(gl: WebGL2RenderingContext, stacks: number, slices: number, color: vec3 = vec3.fromValues(1.0, 1.0, 1.0)): Mesh {
         const positionBuffer = gl.createBuffer();
         const colorBuffer = gl.createBuffer();
         const normalBuffer = gl.createBuffer();
@@ -293,7 +293,7 @@ export default class MeshLoader {
 
                 vertices.push(x, y, z);
                 normals.push(x, y, z);
-                colors.push(1.0, 1.0, 1.0);
+                colors.push(...color);
             }
         }
 
