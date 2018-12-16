@@ -53,61 +53,19 @@ export default abstract class Scene {
             shaderProgram: texturedDepthShader
         });
 
+        const quadNodeFullScreen = new SceneGraphMeshNode({
+            mesh: MeshLoader.loadTexturedQuad(gl, -1.0, 1.0, -1.0, 1.0),
+            localTransform: mat4.create(),
+            textures: [gBufferTextures.accumulationTexture],
+            shaderProgram: texturedShader
+        });
+
         const camera2d = new Camera();
         camera2d.setProjectionOrthographic(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0);
 
-        const cameraNode = new SceneGraphCameraNode(camera2d, [quadNodeUpperLeft, quadNodeLowerLeft, quadNodeUpperRight, quadNodeLowerRight]);
+        const cameraNode = new SceneGraphCameraNode(camera2d, [quadNodeFullScreen, quadNodeUpperLeft, quadNodeLowerLeft, quadNodeUpperRight, quadNodeLowerRight]);
         return new SceneGraphNormalPassNode([cameraNode]);
     }
-
-    /*protected createGBufferNode(gl: WebGL2RenderingContext, children: SceneGraphNode[]): SceneGraphGPassNode {
-        const frameBuffer = gl.createFramebuffer();
-        if (!frameBuffer) {
-            throw new Error("Failed to create framebuffer.");
-        }
-
-        gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
-
-        const positionTarget = this.createRenderTargetTexture(gl, gl.RGBA32F);
-        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, positionTarget, 0);
-
-        const normalTarget = this.createRenderTargetTexture(gl, gl.RGBA32F);
-        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT1, gl.TEXTURE_2D, normalTarget, 0);
-
-        const diffuseTarget = this.createRenderTargetTexture(gl, gl.RGBA8);
-        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT2, gl.TEXTURE_2D, diffuseTarget, 0);
-
-        const depthTarget = this.createRenderTargetTexture(gl, gl.DEPTH_COMPONENT24);
-        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, depthTarget, 0);
-
-        gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1, gl.COLOR_ATTACHMENT2]);
-
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
-        return new SceneGraphGPassNode( {frameBuffer: frameBuffer,
-            diffuseTexture: diffuseTarget,
-            positionTexture: positionTarget,
-            normalTexture: normalTarget,
-            depthTexture: depthTarget
-        },
-            children);
-    }
-
-    protected createRenderTargetTexture(gl: WebGL2RenderingContext, format: GLenum): WebGLTexture {
-        const texture = gl.createTexture();
-        if (!texture) {
-            throw new Error("Failed to create texture.");
-        }
-
-        gl.bindTexture(gl.TEXTURE_2D, texture);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        gl.texStorage2D(gl.TEXTURE_2D, 1, format, gl.drawingBufferWidth, gl.drawingBufferHeight);
-
-        return texture;
-    }*/
 
     protected createTestTexture(gl: WebGL2RenderingContext): WebGLTexture {
         const texture = gl.createTexture();

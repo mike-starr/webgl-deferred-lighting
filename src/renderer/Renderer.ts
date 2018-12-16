@@ -51,16 +51,38 @@ export default class Renderer implements SceneGraphVisitor {
         const depthTarget = this.createRenderTargetTexture(gl, gl.DEPTH_COMPONENT24);
         gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, depthTarget, 0);
 
-        gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1, gl.COLOR_ATTACHMENT2]);
+        const accumulationTarget = this.createRenderTargetTexture(gl, gl.RGBA8);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT3, gl.TEXTURE_2D, accumulationTarget, 0);
+
+        gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1, gl.COLOR_ATTACHMENT2, gl.COLOR_ATTACHMENT3]);
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
-        return {frameBuffer: frameBuffer,
+        return {
+            frameBuffer: frameBuffer,
             diffuseTexture: diffuseTarget,
             positionTexture: positionTarget,
             normalTexture: normalTarget,
-            depthTexture: depthTarget
+            depthTexture: depthTarget,
+            accumulationTexture: accumulationTarget
         };
+    }
+
+    static createLightPassFrameBuffer(gl: WebGL2RenderingContext,
+        accumulationTexture: WebGLTexture,
+        depthTexture: WebGLTexture): WebGLFramebuffer {
+        const frameBuffer = gl.createFramebuffer();
+        if (!frameBuffer) {
+            throw new Error("Failed to create framebuffer.");
+        }
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, accumulationTexture, 0);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, depthTexture, 0);
+        gl.drawBuffers([gl.COLOR_ATTACHMENT0]);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+        return frameBuffer;
     }
 
     render(sceneGraphRoot: SceneGraphNode): void {
@@ -117,9 +139,8 @@ export default class Renderer implements SceneGraphVisitor {
     }
 
     endGPass(): void {
-        this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
-
         this.passType = PassType.None;
+        this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
     }
 
     beginLightPass(node: SceneGraphLightPassNode): void {
@@ -129,18 +150,17 @@ export default class Renderer implements SceneGraphVisitor {
 
         this.passType = PassType.LightPass;
 
-        this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
+        this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, node.frameBuffer);
 
-        this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
         this.gl.disable(this.gl.DEPTH_TEST);
         this.gl.enable(this.gl.BLEND);
         this.gl.blendFunc(this.gl.ONE, this.gl.ONE);
-        this.gl.clear(this.gl.COLOR_BUFFER_BIT);
         this.gl.enable(this.gl.CULL_FACE);
     }
 
     endLightPass(): void {
         this.gl.disable(this.gl.BLEND);
+        this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
 
         this.passType = PassType.None;
     }
@@ -247,11 +267,6 @@ export default class Renderer implements SceneGraphVisitor {
                 case UniformName.LightDirectional_Color:
                 case UniformName.LightPoint_Color:
                     this.gl.uniform3fv(uniform.location, (renderable as LightVolume).color);
-                    break;
-
-                case UniformName.LightDirectional_AmbientIntensity:
-                case UniformName.LightPoint_AmbientIntensity:
-                    this.gl.uniform1f(uniform.location, (renderable as LightVolume).ambientIntensity);
                     break;
 
                 case UniformName.LightDirectional_Intensity:

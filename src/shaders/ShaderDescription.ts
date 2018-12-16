@@ -2,6 +2,7 @@ export enum AttributeName {
     VertexPosition = "aVertexPosition",
     VertexNormal = "aVertexNormal",
     VertexColor = "aVertexColor",
+    VertexEmissiveColor = "aVertexEmissiveColor",
     TexCoord0 = "aTexCoord0"
 };
 
@@ -23,12 +24,10 @@ export enum UniformName {
     LightDirectional_Color = "uLightDirectional.color",
     LightDirectional_Direction = "uLightDirectional.direction",
     LightDirectional_Intensity = "uLightDirectional.intensity",
-    LightDirectional_AmbientIntensity = "uLightDirectional.ambientIntensity",
 
     // point light
     LightPoint_Color = "uLightPoint.color",
-    LightPoint_Intensity = "uLightPoint.intensity",
-    LightPoint_AmbientIntensity = "uLightPoint.ambientIntensity"
+    LightPoint_Intensity = "uLightPoint.intensity"
 };
 
 export interface UniformDescription {

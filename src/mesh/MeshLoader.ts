@@ -2,6 +2,8 @@ import { AttributeName } from "../shaders/ShaderDescription";
 import MeshVertexAttribute from "./MeshVertexAttribute";
 import Mesh from "./Mesh";
 import { vec3 } from "gl-matrix";
+import Material from "./Material";
+import MaterialBuilder from "./MaterialBuilder";
 
 export default class MeshLoader {
 
@@ -86,7 +88,7 @@ export default class MeshLoader {
 
     static loadCube(gl: WebGL2RenderingContext,
         halfExtent: number,
-        color: vec3 = vec3.fromValues(1.0, 1.0, 1.0),
+        material: Material = new MaterialBuilder().build(),
         pyramidMode: boolean = false): Mesh {
         const positionBuffer = gl.createBuffer();
         const colorBuffer = gl.createBuffer();
@@ -97,7 +99,7 @@ export default class MeshLoader {
             throw new Error("Unable to create buffer.");
         }
 
-        const pyramidAdjuster = pyramidMode ? 0.0 : 1;
+        const pyramidAdjuster = pyramidMode ? 0 : 1;
 
         const vertices = [
             // Front face.
@@ -142,7 +144,7 @@ export default class MeshLoader {
 
         const colors = [];
         for (let i = 0; i < 72; ++i) {
-            colors.push(...color);
+            colors.push(...material.diffuseColor);
         }
 
         gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
@@ -229,7 +231,7 @@ export default class MeshLoader {
         const vertexColorAttribute = {
             name: AttributeName.VertexColor,
             buffer: colorBuffer,
-            componentCount: 3,
+            componentCount: 4,
             type: gl.FLOAT,
             normalized: false,
             stride: 0,
@@ -262,7 +264,10 @@ export default class MeshLoader {
         };
     }
 
-    static loadSphere(gl: WebGL2RenderingContext, stacks: number, slices: number, color: vec3 = vec3.fromValues(1.0, 1.0, 1.0)): Mesh {
+    static loadSphere(gl: WebGL2RenderingContext,
+        stacks: number,
+        slices: number,
+        material: Material = new MaterialBuilder().build()): Mesh {
         const positionBuffer = gl.createBuffer();
         const colorBuffer = gl.createBuffer();
         const normalBuffer = gl.createBuffer();
@@ -293,7 +298,7 @@ export default class MeshLoader {
 
                 vertices.push(x, y, z);
                 normals.push(x, y, z);
-                colors.push(...color);
+                colors.push(...material.diffuseColor);
             }
         }
 
@@ -316,7 +321,6 @@ export default class MeshLoader {
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, elementBuffer);
         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
 
-
         gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
 
@@ -337,7 +341,7 @@ export default class MeshLoader {
         const vertexColorAttribute = {
             name: AttributeName.VertexColor,
             buffer: colorBuffer,
-            componentCount: 3,
+            componentCount: 4,
             type: gl.FLOAT,
             normalized: false,
             stride: 0,

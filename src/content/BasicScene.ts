@@ -28,6 +28,7 @@ export default class BasicScene extends Scene {
         const pointLightShader = Shaders.makePointLightVolumeShader(gl);
         const directionalLightShader = Shaders.makeDirectionalLightVolumeShader(gl);
         const gBuffer = Renderer.createGBuffer(gl);
+        const lightPassFrameBuffer = Renderer.createLightPassFrameBuffer(gl, gBuffer.accumulationTexture, gBuffer.depthTexture);
 
         mat4.translate(this.cubeWorldTransform, this.cubeWorldTransform, [0.0, 0.0, -10.0]);
 
@@ -55,7 +56,6 @@ export default class BasicScene extends Scene {
             color: vec3.fromValues(1.0, 1.0, 1.0),
             direction: vec3.fromValues(1.0, 0.0, -1.0),
             intensity: 0.2,
-            ambientIntensity: 0.0,
             mesh: MeshLoader.loadCube(gl, 0.5),
             localTransform: directionalLightVolumeTransform,
             textures: lightPassTextures,
@@ -68,7 +68,6 @@ export default class BasicScene extends Scene {
         const pointLightVolumeNode = new SceneGraphLightNode(<PointLightVolume> {
             color: vec3.fromValues(1.0, 0.0, 0.0),
             intensity: 1.0,
-            ambientIntensity: 0.0,
             mesh: MeshLoader.loadSphere(gl, 10, 10),
             localTransform: pointLightVolumeTransform,
             textures: lightPassTextures,
@@ -80,7 +79,6 @@ export default class BasicScene extends Scene {
         const pointLightVolumeNode2 = new SceneGraphLightNode(<PointLightVolume> {
             color: vec3.fromValues(1.0, 0.0, 1.0),
             intensity: 1.0,
-            ambientIntensity: 0.0,
             mesh: MeshLoader.loadSphere(gl, 10, 10),
             localTransform: this.pointLight2Transform,
             textures: lightPassTextures,
@@ -88,7 +86,7 @@ export default class BasicScene extends Scene {
         });
 
         const cameraNodeMain = new SceneGraphCameraNode(new Camera(), [sphereNode, cubeNode, directionalLightVolumeNode, pointLightVolumeNode, pointLightVolumeNode2]);
-        const lightPassNode = new SceneGraphLightPassNode([cameraNodeMain]);
+        const lightPassNode = new SceneGraphLightPassNode(lightPassFrameBuffer, [cameraNodeMain]);
         const gPassNode = new SceneGraphGPassNode(gBuffer, [cameraNodeMain]);
 
         const overlayNode = this.createOverlayNode(gl, gPassNode.gBuffer);

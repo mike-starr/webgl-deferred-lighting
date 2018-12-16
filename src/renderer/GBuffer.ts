@@ -4,4 +4,5 @@ export default interface GBuffer {
     diffuseTexture: WebGLTexture;
     normalTexture: WebGLTexture;
     depthTexture: WebGLTexture;
+    accumulationTexture: WebGLTexture;
 }
