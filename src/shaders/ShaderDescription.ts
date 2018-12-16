@@ -1,8 +1,6 @@
 export enum AttributeName {
     VertexPosition = "aVertexPosition",
     VertexNormal = "aVertexNormal",
-    VertexColor = "aVertexColor",
-    VertexEmissiveColor = "aVertexEmissiveColor",
     TexCoord0 = "aTexCoord0"
 };
 
@@ -19,6 +17,12 @@ export enum UniformName {
     TextureSampler1 = "uTextureSampler1",
     TextureSampler2 = "uTextureSampler2",
     TextureSampler3 = "uTextureSampler3",
+
+    // material
+    MaterialDiffuseColor = "uMaterial.diffuseColor",
+    MaterialEmissiveColor = "uMaterial.emissiveColor",
+    MaterialSpecularIntensity = "uMaterial.specularIntensity",
+    MaterialSpecularPower = "uMaterial.specularIntensity",
 
     // directional light
     LightDirectional_Color = "uLightDirectional.color",

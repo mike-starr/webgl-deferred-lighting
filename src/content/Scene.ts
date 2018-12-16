@@ -8,6 +8,7 @@ import MeshLoader from "../mesh/MeshLoader";
 import Shaders from "../shaders/Shaders";
 import GBuffer from "../renderer/GBuffer";
 import SceneGraphNormalPassNode from "../scenegraph/SceneGraphNormalPassNode";
+import MaterialBuilder from "../material/MaterialBuilder";
 
 
 export default abstract class Scene {
@@ -32,24 +33,28 @@ export default abstract class Scene {
             mesh: MeshLoader.loadTexturedQuad(gl, -1.0, -0.5, 0.5, 1.0),
             localTransform: mat4.create(),
             textures: [gBufferTextures.diffuseTexture],
+            material: MaterialBuilder.default,
             shaderProgram: texturedShader
         });
         const quadNodeLowerLeft = new SceneGraphMeshNode({
             mesh: MeshLoader.loadTexturedQuad(gl, -1.0, -0.5, -1.0, -0.5),
             localTransform: mat4.create(),
             textures: [gBufferTextures.positionTexture],
+            material: MaterialBuilder.default,
             shaderProgram: texturedShader
         });
         const quadNodeUpperRight = new SceneGraphMeshNode({
             mesh: MeshLoader.loadTexturedQuad(gl, 0.5, 1.0, 0.5, 1.0),
             localTransform: mat4.create(),
             textures: [gBufferTextures.normalTexture],
+            material: MaterialBuilder.default,
             shaderProgram: texturedShader
         });
         const quadNodeLowerRight = new SceneGraphMeshNode({
             mesh: MeshLoader.loadTexturedQuad(gl, 0.5, 1.0, -1.0, -0.5),
             localTransform: mat4.create(),
             textures: [gBufferTextures.depthTexture],
+            material: MaterialBuilder.default,
             shaderProgram: texturedDepthShader
         });
 
@@ -57,6 +62,7 @@ export default abstract class Scene {
             mesh: MeshLoader.loadTexturedQuad(gl, -1.0, 1.0, -1.0, 1.0),
             localTransform: mat4.create(),
             textures: [gBufferTextures.accumulationTexture],
+            material: MaterialBuilder.default,
             shaderProgram: texturedShader
         });
 

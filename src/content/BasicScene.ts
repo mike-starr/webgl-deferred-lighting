@@ -12,6 +12,7 @@ import SceneGraphGPassNode from "../scenegraph/SceneGraphGPassNode";
 import DirectionalLightVolume from "../lighting/DirectionalLightVolume";
 import PointLightVolume from "../lighting/PointLightVolume";
 import Renderer from "../renderer/Renderer";
+import MaterialBuilder from "../material/MaterialBuilder";
 
 export default class BasicScene extends Scene {
 
@@ -36,6 +37,7 @@ export default class BasicScene extends Scene {
             mesh: MeshLoader.loadCube(gl, 0.5),
             localTransform: this.cubeWorldTransform,
             textures: [],
+            material: MaterialBuilder.default,
             shaderProgram: gPassShader });
 
         const sphereTransform = mat4.create();
@@ -45,6 +47,7 @@ export default class BasicScene extends Scene {
             mesh: MeshLoader.loadSphere(gl, 20, 20),
             localTransform: sphereTransform,
             textures: [],
+            material: MaterialBuilder.default,
             shaderProgram: gPassShader });
 
         const lightPassTextures = [gBuffer.positionTexture, gBuffer.normalTexture, gBuffer.diffuseTexture];

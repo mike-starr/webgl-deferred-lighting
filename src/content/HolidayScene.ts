@@ -2,7 +2,7 @@ import Scene from "./Scene";
 import SceneGraphNode from "../scenegraph/SceneGraphNode";
 import SceneGraphCameraNode from "../scenegraph/SceneGraphCameraNode";
 import MeshLoader from "../mesh/MeshLoader";
-import { mat4, vec3, vec4, quat } from "gl-matrix";
+import { mat4, vec3, quat } from "gl-matrix";
 import Camera from "../camera/Camera";
 import SceneGraphTransformNode from "../scenegraph/SceneGraphTransformNode";
 import SceneGraphMeshNode from "../scenegraph/SceneGraphMeshNode";
@@ -17,7 +17,8 @@ import SceneGraphLightPassNode from "../scenegraph/SceneGraphLightPassNode";
 import Mesh from "../Mesh/Mesh";
 import PointLightVolume from "../lighting/PointLightVolume";
 import RotationAnimation from "./RotationAnimation";
-import MaterialBuilder from "../mesh/MaterialBuilder";
+import MaterialBuilder from "../material/MaterialBuilder";
+import Material from "../material/Material";
 
 export default class HolidayScene extends Scene {
 
@@ -122,31 +123,30 @@ export default class HolidayScene extends Scene {
     }
 
     private makeTree(gl: WebGL2RenderingContext): SceneGraphNode {
-        const brownMaterial = new MaterialBuilder().withDiffuseColor(vec4.fromValues(.4, .26, .13, 1.0)).build();
-        const brownCube = MeshLoader.loadCube(gl, 0.5, brownMaterial);
+        const cube = MeshLoader.loadCube(gl, 0.5);
+        const pyramid = MeshLoader.loadCube(gl, 0.5, true);
+        const brownMaterial = new MaterialBuilder().withDiffuseColor(vec3.fromValues(.4, .26, .13)).build();
+        const greenMaterial = new MaterialBuilder().withDiffuseColor(vec3.fromValues(0.0, .41, .24)).build();
 
         const stumpWidth = 0.3;
         const stumpHeight = 0.4;
 
         const stumpTransform = mat4.create();
         mat4.fromRotationTranslationScale(stumpTransform, quat.create(), [0.0, stumpHeight / 2.0, 0.0], [stumpWidth, stumpHeight, stumpWidth]);
-        const stumpNode = new SceneGraphMeshNode(this.makeCubeRenderable(stumpTransform, brownCube));
-
-        const greenMaterial = new MaterialBuilder().withDiffuseColor(vec4.fromValues(0.0, .41, .24, 1.0)).build();
-        const greenCube = MeshLoader.loadCube(gl, 0.5, greenMaterial, true);
+        const stumpNode = new SceneGraphMeshNode(this.makeCubeRenderable(stumpTransform, cube, brownMaterial));
 
         const treeHeight = 2.2;
         const treeWidth = 1.1;
 
         const treeTransform = mat4.create();
         mat4.fromRotationTranslationScale(treeTransform, quat.create(), [0.0, (treeHeight / 2.0) + stumpHeight, 0.0], [treeWidth, treeHeight, treeWidth]);
-        const treeNode = new SceneGraphMeshNode(this.makeCubeRenderable(treeTransform, greenCube));
+        const treeNode = new SceneGraphMeshNode(this.makeCubeRenderable(treeTransform, pyramid, greenMaterial));
 
         const treeTransform2 = mat4.create();
         const treeRot = quat.create();
         quat.fromEuler(treeRot, 0.0, 45.0, 0.0);
         mat4.fromRotationTranslationScale(treeTransform2, treeRot, [0.0, (treeHeight / 2.0) + stumpHeight, 0.0], [treeWidth, treeHeight, treeWidth]);
-        const treeNode2 = new SceneGraphMeshNode(this.makeCubeRenderable(treeTransform2, greenCube));
+        const treeNode2 = new SceneGraphMeshNode(this.makeCubeRenderable(treeTransform2, pyramid, greenMaterial));
 
         const starNode = this.makeStar(gl);
         const starTransform = mat4.create();
@@ -158,9 +158,9 @@ export default class HolidayScene extends Scene {
     }
 
     private makeStar(gl: WebGL2RenderingContext) {
-        const goldMaterial = new MaterialBuilder().withDiffuseColor(vec4.fromValues(.81, .71, .23, 1.0)).build();
-        const goldPyramid = MeshLoader.loadCube(gl, 0.5, goldMaterial, true);
-        const goldCube = MeshLoader.loadCube(gl, 0.5, goldMaterial);
+        const goldMaterial = new MaterialBuilder().withDiffuseColor(vec3.fromValues(.81, .71, .23)).build();
+        const goldPyramid = MeshLoader.loadCube(gl, 0.5, true);
+        const goldCube = MeshLoader.loadCube(gl, 0.5);
 
         const pointHeight = 0.17;
         const baseWidth = 0.06;
@@ -196,13 +196,13 @@ export default class HolidayScene extends Scene {
         const centerTransform = mat4.create();
         mat4.fromScaling(centerTransform, [baseWidth, baseWidth, baseWidth]);
 
-        const bottomNode = new SceneGraphMeshNode(this.makeCubeRenderable(bottomTransform, goldPyramid));
-        const topNode = new SceneGraphMeshNode(this.makeCubeRenderable(topTransform, goldPyramid));
-        const leftNode = new SceneGraphMeshNode(this.makeCubeRenderable(leftTransform, goldPyramid));
-        const rightNode = new SceneGraphMeshNode(this.makeCubeRenderable(rightTransform, goldPyramid));
-        const backNode = new SceneGraphMeshNode(this.makeCubeRenderable(backTransform, goldPyramid));
-        const frontNode = new SceneGraphMeshNode(this.makeCubeRenderable(frontTransform, goldPyramid));
-        const centerNode = new SceneGraphMeshNode(this.makeCubeRenderable(centerTransform, goldCube));
+        const bottomNode = new SceneGraphMeshNode(this.makeCubeRenderable(bottomTransform, goldPyramid, goldMaterial));
+        const topNode = new SceneGraphMeshNode(this.makeCubeRenderable(topTransform, goldPyramid, goldMaterial));
+        const leftNode = new SceneGraphMeshNode(this.makeCubeRenderable(leftTransform, goldPyramid, goldMaterial));
+        const rightNode = new SceneGraphMeshNode(this.makeCubeRenderable(rightTransform, goldPyramid, goldMaterial));
+        const backNode = new SceneGraphMeshNode(this.makeCubeRenderable(backTransform, goldPyramid, goldMaterial));
+        const frontNode = new SceneGraphMeshNode(this.makeCubeRenderable(frontTransform, goldPyramid, goldMaterial));
+        const centerNode = new SceneGraphMeshNode(this.makeCubeRenderable(centerTransform, goldCube, goldMaterial));
 
         const pointLight = this.makePointLight(gl, 0.3, vec3.fromValues(1.0, 1.0, 1.0), 1.0);
         const orbit = this.makeOrbit(0.18, [pointLight, pointLight, pointLight]);
@@ -239,13 +239,14 @@ export default class HolidayScene extends Scene {
         mat4.fromScaling(emitterTransform, [emitterRadiusScale, emitterRadiusScale, emitterRadiusScale]);
 
         const sphereMaterial = new MaterialBuilder()
-            .withDiffuseColor(vec4.fromValues(0.0, 0.0, 0.0, 1.0))
-            .withEmissiveColor(vec4.fromValues(color[0], color[1], color[2], 1.0))
+            .withDiffuseColor(vec3.fromValues(0.0, 0.0, 0.0))
+            .withEmissiveColor(color)
             .build();
         const emitterSphere = {
-            mesh: MeshLoader.loadSphere(gl, 10, 10, sphereMaterial),
+            mesh: MeshLoader.loadSphere(gl, 10, 10),
             localTransform: emitterTransform,
             textures: [],
+            material: sphereMaterial,
             shaderProgram: this.gPassShader as ShaderProgram
         }
 
@@ -269,11 +270,12 @@ export default class HolidayScene extends Scene {
         return new SceneGraphNode(transformNodes);
     }
 
-    private makeCubeRenderable(transform: mat4, mesh: Mesh) {
+    private makeCubeRenderable(transform: mat4, mesh: Mesh, material: Material = MaterialBuilder.default) {
         return {
             mesh: mesh,
             localTransform: transform,
             textures: [],
+            material: material,
             shaderProgram: this.gPassShader as ShaderProgram
         };
     }

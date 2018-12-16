@@ -4,39 +4,6 @@ import ShaderMaker from "./ShaderMaker";
 
 export default class Shaders {
 
-    static makeVertexColorShader(gl: WebGL2RenderingContext) {
-        const vsSource =
-            `#version 300 es
-            in vec4 aVertexPosition;
-            in vec4 aVertexColor;
-
-            uniform mat4 uWorldMatrix;
-            uniform mat4 uProjectionViewMatrix;
-
-            out lowp vec4 vColor;
-
-            void main() {
-                gl_Position = uProjectionViewMatrix * uWorldMatrix * aVertexPosition;
-                vColor = aVertexColor;
-            }`;
-
-        const fsSource =
-            `#version 300 es
-            precision highp float;
-
-            in lowp vec4 vColor;
-
-            out vec4 fragColor;
-
-            void main() {
-                fragColor = vColor;
-            }`;
-
-        const attributes = [AttributeName.VertexPosition, AttributeName.VertexColor];
-        const uniforms = [UniformName.ProjectionViewMatrix, UniformName.WorldMatrix];
-        return ShaderMaker.makeShaderProgram(gl, vsSource, fsSource, attributes, uniforms);
-    }
-
     static makeTextureShader(gl: WebGL2RenderingContext, depthMode: boolean = false): ShaderProgram {
         const vsSource =
             `#version 300 es
@@ -65,7 +32,7 @@ export default class Shaders {
             out vec4 fragColor;
 
             void main() {
-                fragColor = texture(uTextureSampler0, vTexCoord0);
+                fragColor = vec4(texture(uTextureSampler0, vTexCoord0).xyz, 1.0);
             }`;
 
         const fsDepthSource =
@@ -92,7 +59,11 @@ export default class Shaders {
             }`;
 
         const attributes = [AttributeName.VertexPosition, AttributeName.TexCoord0];
-        const uniforms = [UniformName.ProjectionViewMatrix, UniformName.WorldMatrix, UniformName.TextureSampler0];
+        const uniforms = [
+            UniformName.ProjectionViewMatrix,
+            UniformName.WorldMatrix,
+            UniformName.TextureSampler0
+        ];
         return ShaderMaker.makeShaderProgram(gl, vsSource, depthMode ? fsDepthSource : fsSource, attributes, uniforms);
     }
 
@@ -101,37 +72,35 @@ export default class Shaders {
             `#version 300 es
 
             in vec4 aVertexPosition;
-            in vec4 aVertexColor;
             in vec3 aVertexNormal;
 
             uniform mat4 uWorldMatrix;
             uniform mat4 uProjectionViewMatrix;
 
             out vec4 vWorldPosition;
-            out vec4 vDiffuse;
             out vec4 vNormal;
-            out vec3 vEmissive;
-            out float specularIntensity;
-            out float specularPower;
 
             void main() {
                 gl_Position = uProjectionViewMatrix * uWorldMatrix * aVertexPosition;
                 vWorldPosition = uWorldMatrix * aVertexPosition;
                 vNormal = uWorldMatrix * vec4(aVertexNormal, 0.0);
-                vDiffuse = aVertexColor;
-                vEmissive = vec3(0.0, 0.0, 0.0);
-                specularIntensity = 0.5;
-                specularPower = 1.0;
             }`;
 
         const fsSource =
             `#version 300 es
             precision highp float;
 
+            struct Material {
+                vec3 diffuseColor;
+                vec3 emissiveColor;
+                float specularIntensity;
+                float specularPower;
+            };
+
+            uniform Material uMaterial;
+
             in vec4 vWorldPosition;
-            in vec4 vDiffuse;
             in vec4 vNormal;
-            in vec3 vEmissive;
 
             layout(location=0) out vec4 fragPosition;
             layout(location=1) out vec4 fragNormal;
@@ -140,13 +109,23 @@ export default class Shaders {
 
             void main() {
                 fragPosition = vWorldPosition;
-                fragDiffuse = vDiffuse;
                 fragNormal = vNormal;
-                fragAccumulation = vec4(vEmissive, 1.0);
+                fragDiffuse = vec4(uMaterial.diffuseColor.xyz, 1.0);
+                fragAccumulation = vec4(uMaterial.emissiveColor.xyz, 1.0);
             }`;
 
-        const attributes = [AttributeName.VertexPosition, AttributeName.VertexColor, AttributeName.VertexNormal];
-        const uniforms = [UniformName.ProjectionViewMatrix, UniformName.WorldMatrix];//, UniformName.TextureSampler0];
+        const attributes = [
+            AttributeName.VertexPosition,
+            AttributeName.VertexNormal
+        ];
+        const uniforms = [
+            UniformName.ProjectionViewMatrix,
+            UniformName.WorldMatrix,
+            UniformName.MaterialDiffuseColor,
+            UniformName.MaterialEmissiveColor,
+            UniformName.MaterialSpecularIntensity,
+            UniformName.MaterialSpecularPower
+        ];
         return ShaderMaker.makeShaderProgram(gl, vsSource, fsSource, attributes, uniforms);
     }
 
@@ -197,14 +176,16 @@ export default class Shaders {
             }`;
 
         const attributes = [AttributeName.VertexPosition];
-        const uniforms = [UniformName.ProjectionViewMatrix,
-        UniformName.WorldMatrix,
-        UniformName.TextureSampler0,
-        UniformName.TextureSampler1,
-        UniformName.TextureSampler2,
-        UniformName.LightDirectional_Direction,
-        UniformName.LightDirectional_Color,
-        UniformName.LightDirectional_Intensity];
+        const uniforms = [
+            UniformName.ProjectionViewMatrix,
+            UniformName.WorldMatrix,
+            UniformName.TextureSampler0,
+            UniformName.TextureSampler1,
+            UniformName.TextureSampler2,
+            UniformName.LightDirectional_Direction,
+            UniformName.LightDirectional_Color,
+            UniformName.LightDirectional_Intensity
+        ];
         return ShaderMaker.makeShaderProgram(gl, vsSource, fsSource, attributes, uniforms);
     }
 
@@ -278,14 +259,16 @@ export default class Shaders {
             }`;
 
         const attributes = [AttributeName.VertexPosition];
-        const uniforms = [UniformName.ProjectionViewMatrix,
-        UniformName.WorldMatrix,
-        UniformName.InverseWorldMatrix,
-        UniformName.TextureSampler0,
-        UniformName.TextureSampler1,
-        UniformName.TextureSampler2,
-        UniformName.LightPoint_Color,
-        UniformName.LightPoint_Intensity];
+        const uniforms = [
+            UniformName.ProjectionViewMatrix,
+            UniformName.WorldMatrix,
+            UniformName.InverseWorldMatrix,
+            UniformName.TextureSampler0,
+            UniformName.TextureSampler1,
+            UniformName.TextureSampler2,
+            UniformName.LightPoint_Color,
+            UniformName.LightPoint_Intensity
+        ];
         return ShaderMaker.makeShaderProgram(gl, vsSource, fsSource, attributes, uniforms);
     }
 }

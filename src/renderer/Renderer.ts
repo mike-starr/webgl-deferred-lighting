@@ -264,21 +264,34 @@ export default class Renderer implements SceneGraphVisitor {
                     this.gl.uniform1i(uniform.location, 2);
                     break;
 
+                case UniformName.MaterialDiffuseColor:
+                    this.gl.uniform3fv(uniform.location, renderable.material.diffuseColor);
+                    break;
+
+                case UniformName.MaterialEmissiveColor:
+                    this.gl.uniform3fv(uniform.location, renderable.material.emissiveColor);
+                    break;
+
+                case UniformName.MaterialSpecularIntensity:
+                    this.gl.uniform1f(uniform.location, renderable.material.specularIntensity);
+                    break;
+
+                case UniformName.MaterialSpecularPower:
+                    this.gl.uniform1f(uniform.location, renderable.material.specularPower);
+                    break;
+
                 case UniformName.LightDirectional_Color:
                 case UniformName.LightPoint_Color:
                     this.gl.uniform3fv(uniform.location, (renderable as LightVolume).color);
                     break;
 
                 case UniformName.LightDirectional_Intensity:
-                    this.gl.uniform1f(uniform.location, (renderable as DirectionalLightVolume).intensity);
+                case UniformName.LightPoint_Intensity:
+                    this.gl.uniform1f(uniform.location, (renderable as LightVolume).intensity);
                     break;
 
                 case UniformName.LightDirectional_Direction:
                     this.gl.uniform3fv(uniform.location, (renderable as DirectionalLightVolume).direction);
-                    break;
-
-                case UniformName.LightPoint_Intensity:
-                    this.gl.uniform1f(uniform.location, (renderable as PointLightVolume).intensity);
                     break;
 
                 default:
