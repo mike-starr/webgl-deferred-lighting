@@ -2,33 +2,35 @@ import { mat4 } from "gl-matrix";
 import SceneGraphVisitor from "../scenegraph/SceneGraphVisitor";
 import SceneGraphNode from "../scenegraph/SceneGraphNode";
 import { UniformName } from "../shaders/ShaderDescription";
-import ShaderProgram from "../shaders/ShaderProgram";
 import SceneGraphGPassNode from "../scenegraph/SceneGraphGPassNode";
 import SceneGraphLightPassNode from "../scenegraph/SceneGraphLightPassNode";
 import Renderable from "./Renderable";
 import GBuffer from "./GBuffer";
 import DirectionalLightVolume from "../lighting/DirectionalLightVolume";
 import LightVolume from "../lighting/LightVolume";
-import PointLightVolume from "../lighting/PointLightVolume";
+import ShaderProgram from "../shaders/ShaderProgram";
+import Shaders from "../shaders/Shaders";
 
 enum PassType {
     None,
     GPass,
     LightPass,
     NormalPass
-}
+};
 
 export default class Renderer implements SceneGraphVisitor {
     private worldMatrixStack: mat4[] = [];
     private projectionViewMatrixStack: mat4[] = [];
-    private shaderProgramStack: ShaderProgram[] = [];
     private currentWorldMatrix: mat4 = mat4.create();
+    private stencilPassShader: ShaderProgram;
     private passType: PassType = PassType.None;
 
     constructor(private readonly gl: WebGL2RenderingContext) {
         if (!this.gl.getExtension("EXT_color_buffer_float")) {
             throw new Error("Extension EXT_color_buffer_float is not available.");
         }
+
+        this.stencilPassShader = Shaders.makeStencilPassShader(gl);
     }
 
     static createGBuffer(gl: WebGL2RenderingContext): GBuffer {
@@ -48,8 +50,8 @@ export default class Renderer implements SceneGraphVisitor {
         const diffuseTarget = this.createRenderTargetTexture(gl, gl.RGBA8);
         gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT2, gl.TEXTURE_2D, diffuseTarget, 0);
 
-        const depthTarget = this.createRenderTargetTexture(gl, gl.DEPTH_COMPONENT24);
-        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, depthTarget, 0);
+        const depthTarget = this.createRenderTargetTexture(gl, gl.DEPTH24_STENCIL8);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.TEXTURE_2D, depthTarget, 0);
 
         const accumulationTarget = this.createRenderTargetTexture(gl, gl.RGBA8);
         gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT3, gl.TEXTURE_2D, accumulationTarget, 0);
@@ -78,7 +80,7 @@ export default class Renderer implements SceneGraphVisitor {
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
         gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, accumulationTexture, 0);
-        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, depthTexture, 0);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.TEXTURE_2D, depthTexture, 0);
         gl.drawBuffers([gl.COLOR_ATTACHMENT0]);
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
@@ -86,12 +88,7 @@ export default class Renderer implements SceneGraphVisitor {
     }
 
     render(sceneGraphRoot: SceneGraphNode): void {
-        this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
-        this.gl.clearDepth(1.0);
-        this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
-        this.gl.enable(this.gl.DEPTH_TEST);
         this.gl.depthFunc(this.gl.LEQUAL);
-        this.gl.enable(this.gl.CULL_FACE);
 
         sceneGraphRoot.accept(this);
     }
@@ -112,65 +109,54 @@ export default class Renderer implements SceneGraphVisitor {
         this.worldMatrixStack.pop();
     }
 
-    pushShaderProgram(shaderProgram: ShaderProgram): void {
-        this.shaderProgramStack.push(shaderProgram);
-    }
-
-    popShaderProgram(): void {
-        this.shaderProgramStack.pop();
-    }
-
     beginGPass(node: SceneGraphGPassNode): void {
-        if (this.passType !== PassType.None) {
-            throw new Error("Can't start a render pass while in another pass.")
-        }
-
-        this.passType = PassType.GPass;
+        this.startPass(PassType.GPass);
 
         this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, node.gBuffer.frameBuffer);
 
+        // depth reads
+        this.gl.enable(this.gl.DEPTH_TEST);
+
+        // depth writes
+        this.gl.depthMask(true);
+
+        // blend
+        this.gl.disable(this.gl.BLEND);
+
+        // culing
+        this.gl.enable(this.gl.CULL_FACE);
+        this.gl.cullFace(this.gl.BACK);
+
         this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
         this.gl.clearDepth(1.0);
-        this.gl.disable(this.gl.BLEND);
-        this.gl.enable(this.gl.DEPTH_TEST);
-        this.gl.depthFunc(this.gl.LEQUAL);
-        this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
-        this.gl.enable(this.gl.CULL_FACE);
+        this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT | this.gl.STENCIL_BUFFER_BIT);
     }
 
     endGPass(): void {
         this.passType = PassType.None;
-        this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
     }
 
     beginLightPass(node: SceneGraphLightPassNode): void {
-        if (this.passType !== PassType.None) {
-            throw new Error("Can't start a render pass while in another pass.")
-        }
-
-        this.passType = PassType.LightPass;
+        this.startPass(PassType.LightPass);
 
         this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, node.frameBuffer);
-
-        this.gl.disable(this.gl.DEPTH_TEST);
-        this.gl.enable(this.gl.BLEND);
-        this.gl.blendFunc(this.gl.ONE, this.gl.ONE);
-        this.gl.enable(this.gl.CULL_FACE);
+        this.gl.enable(this.gl.STENCIL_TEST);
+        this.gl.depthMask(false);
     }
 
     endLightPass(): void {
         this.gl.disable(this.gl.BLEND);
-        this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
+        this.gl.cullFace(this.gl.BACK);
+        this.gl.depthMask(true);
+        this.gl.disable(this.gl.STENCIL_TEST);
 
         this.passType = PassType.None;
     }
 
     beginNormalPass(): void {
-        if (this.passType !== PassType.None) {
-            throw new Error("Can't start a render pass while in another pass.")
-        }
+        this.startPass(PassType.NormalPass);
 
-        this.passType = PassType.NormalPass;
+        this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
     }
 
     endNormalPass(): void {
@@ -181,6 +167,40 @@ export default class Renderer implements SceneGraphVisitor {
         if (this.passType !== PassType.LightPass) {
             return;
         }
+
+        // depth reads
+        this.gl.enable(this.gl.DEPTH_TEST);
+
+        // blend
+        this.gl.disable(this.gl.BLEND);
+
+        // culling
+        this.gl.disable(this.gl.CULL_FACE);
+
+        //stencil
+        this.gl.clearStencil(0);
+        this.gl.clear(this.gl.STENCIL_BUFFER_BIT);
+        this.gl.stencilFunc(this.gl.ALWAYS, 0, 1);
+        this.gl.stencilOpSeparate(this.gl.BACK, this.gl.KEEP, this.gl.INCR_WRAP, this.gl.KEEP);
+        this.gl.stencilOpSeparate(this.gl.FRONT, this.gl.KEEP, this.gl.DECR_WRAP, this.gl.KEEP);
+
+        this.renderRenderable(renderable, this.stencilPassShader);
+
+        // depth reads
+        this.gl.disable(this.gl.DEPTH_TEST);
+
+        // blend
+        this.gl.enable(this.gl.BLEND);
+        this.gl.blendFunc(this.gl.ONE, this.gl.ONE);
+
+        // culling
+        this.gl.enable(this.gl.CULL_FACE);
+        this.gl.cullFace(this.gl.FRONT);
+
+        // stencil
+        this.gl.stencilOpSeparate(this.gl.BACK, this.gl.KEEP, this.gl.KEEP, this.gl.KEEP);
+        this.gl.stencilOpSeparate(this.gl.FRONT, this.gl.KEEP, this.gl.KEEP, this.gl.KEEP);
+        this.gl.stencilFunc(this.gl.NOTEQUAL, 0, 1);
 
         this.renderRenderable(renderable);
     }
@@ -194,18 +214,18 @@ export default class Renderer implements SceneGraphVisitor {
         this.renderRenderable(renderable);
     }
 
-    private renderRenderable(renderable: Renderable) {
+    private renderRenderable(renderable: Renderable, shaderOverride?: ShaderProgram) {
         this.updateCurrentWorldMatrix();
 
-        const currentShader = renderable.shaderProgram;
-        this.gl.useProgram(currentShader.program);
+        const shader = shaderOverride ? shaderOverride : renderable.shaderProgram;
+        this.gl.useProgram(shader.program);
 
         const mesh = renderable.mesh;
 
         const worldMatrix = mat4.create();
         mat4.mul(worldMatrix, this.currentWorldMatrix, renderable.localTransform);
 
-        for (const attribute of currentShader.description.attributes) {
+        for (const attribute of shader.description.attributes) {
             const vertexAttribute = mesh.vertexAttributeMap.get(attribute.name);
             if (!vertexAttribute) {
                 throw new Error(`Mesh is missing data for attribute: ${attribute.name}`);
@@ -221,7 +241,7 @@ export default class Renderer implements SceneGraphVisitor {
             this.gl.enableVertexAttribArray(attribute.location);
         }
 
-        for (const uniform of currentShader.description.uniforms) {
+        for (const uniform of shader.description.uniforms) {
             switch (uniform.name) {
                 case UniformName.ProjectionViewMatrix:
                     this.gl.uniformMatrix4fv(uniform.location,
@@ -313,6 +333,14 @@ export default class Renderer implements SceneGraphVisitor {
         for (const matrix of this.worldMatrixStack) {
             mat4.mul(this.currentWorldMatrix, this.currentWorldMatrix, matrix);
         }
+    }
+
+    private startPass(type: PassType) {
+        if (this.passType !== PassType.None) {
+            throw new Error("Can't start a render pass while in another pass.")
+        }
+
+        this.passType = type;
     }
 
     private static createRenderTargetTexture(gl: WebGL2RenderingContext, format: GLenum): WebGLTexture {

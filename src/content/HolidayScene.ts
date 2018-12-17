@@ -91,7 +91,6 @@ export default class HolidayScene extends Scene {
         const lightPass = new SceneGraphLightPassNode(lightPassFrameBuffer, [cameraNodeMain]);
         const overlayPass = this.createOverlayNode(gl, gBufferPass.gBuffer);
 
-
         this.rootNode = new SceneGraphNode([gBufferPass, lightPass, overlayPass]);
     }
 
@@ -205,7 +204,7 @@ export default class HolidayScene extends Scene {
         const centerNode = new SceneGraphMeshNode(this.makeCubeRenderable(centerTransform, goldCube, goldMaterial));
 
         const pointLight = this.makePointLight(gl, 0.3, vec3.fromValues(1.0, 1.0, 1.0), 1.0);
-        const orbit = this.makeOrbit(0.18, [pointLight, pointLight, pointLight]);
+        const orbit = this.makeOrbit(0.18, [pointLight, pointLight]);
 
         const orbitTransform = mat4.create();
         mat4.rotateZ(orbitTransform, orbitTransform, Math.PI / 4.0);

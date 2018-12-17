@@ -160,8 +160,6 @@ export default class Shaders {
 
             out vec4 fragColor;
 
-            //layout(location=0) out vec4 accumulationTarget;
-
             void main() {
                 ivec2 fragCoord = ivec2(gl_FragCoord.xy);
                 vec3 position = texelFetch(uTextureSampler0, fragCoord, 0).xyz;
@@ -172,7 +170,6 @@ export default class Shaders {
                 vec4 diffuseLightColor = vec4(uLightDirectional.color * uLightDirectional.intensity * diffuseFactor, 1.0f);
 
                 fragColor = diffuse * diffuseLightColor;
-                //accumulationTarget = diffuse * diffuseLightColor;
             }`;
 
         const attributes = [AttributeName.VertexPosition];
@@ -230,7 +227,7 @@ export default class Shaders {
                 vec4 diffuse = vec4(texelFetch(uTextureSampler2, fragCoord, 0).xyz, 1.0);
 
                 // Determine normals, position, direction in light space.
-                // The light is at 0,0,0 in light space, so the direction is the same as the surface's
+                // The light is at (0, 0, 0) in light space, so the direction is the same as the surface's
                 // position in light space.
                 vec3 lightDirection = (uInverseWorldMatrix * position).xyz;
                 float lightDistanceSq = dot(lightDirection, lightDirection);
@@ -244,18 +241,11 @@ export default class Shaders {
                 float diffuseFactor = max(0.0, dot(normalLightSpace, normalize(-lightDirection)));
                 vec3 diffuseLightColor = uLightPoint.color * uLightPoint.intensity * diffuseFactor * attenuation;
 
-
-
                 // Specular
-
 
 
                 // Combine everything.
                 fragColor = diffuse * vec4(diffuseLightColor, 1.0);// + vec4(0.0, 0.08, 0.0, 1.0);
-
-
-
-
             }`;
 
         const attributes = [AttributeName.VertexPosition];
@@ -268,6 +258,34 @@ export default class Shaders {
             UniformName.TextureSampler2,
             UniformName.LightPoint_Color,
             UniformName.LightPoint_Intensity
+        ];
+        return ShaderMaker.makeShaderProgram(gl, vsSource, fsSource, attributes, uniforms);
+    }
+
+    static makeStencilPassShader(gl: WebGL2RenderingContext) {
+        const vsSource =
+            `#version 300 es
+
+            in vec4 aVertexPosition;
+
+            uniform mat4 uWorldMatrix;
+            uniform mat4 uProjectionViewMatrix;
+
+            void main() {
+                gl_Position = uProjectionViewMatrix * uWorldMatrix * aVertexPosition;
+            }`;
+
+        const fsSource =
+            `#version 300 es
+
+            void main() {
+
+            }`;
+
+        const attributes = [AttributeName.VertexPosition];
+        const uniforms = [
+            UniformName.ProjectionViewMatrix,
+            UniformName.WorldMatrix
         ];
         return ShaderMaker.makeShaderProgram(gl, vsSource, fsSource, attributes, uniforms);
     }
