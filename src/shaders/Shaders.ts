@@ -108,8 +108,8 @@ export default class Shaders {
             layout(location=3) out vec4 fragAccumulation;
 
             void main() {
-                fragPosition = vWorldPosition;
-                fragNormal = vNormal;
+                fragPosition = vec4(vWorldPosition.xyz, uMaterial.specularIntensity);
+                fragNormal = vec4(vNormal.xyz, uMaterial.specularPower);
                 fragDiffuse = vec4(uMaterial.diffuseColor.xyz, 1.0);
                 fragAccumulation = vec4(uMaterial.emissiveColor.xyz, 1.0);
             }`;
@@ -209,7 +209,7 @@ export default class Shaders {
 
             uniform mat4 uWorldMatrix;
             uniform mat4 uInverseWorldMatrix;
-            uniform mat4 uCameraPosLightSpace;
+            uniform vec3 uCameraPosLocalSpace;
 
             struct LightPoint {
                 vec3 color;
@@ -222,8 +222,11 @@ export default class Shaders {
 
             void main() {
                 ivec2 fragCoord = ivec2(gl_FragCoord.xy);
-                vec4 position = vec4(texelFetch(uTextureSampler0, fragCoord, 0).xyz, 1.0);
-                vec3 normal = normalize(texelFetch(uTextureSampler1, fragCoord, 0).xyz);
+                vec4 positionTexel = texelFetch(uTextureSampler0, fragCoord, 0);
+                vec4 normalTexel = texelFetch(uTextureSampler1, fragCoord, 0);
+
+                vec4 position = vec4(positionTexel.xyz, 1.0);
+                vec3 normal = normalize(normalTexel.xyz);
                 vec4 diffuse = vec4(texelFetch(uTextureSampler2, fragCoord, 0).xyz, 1.0);
 
                 // Determine normals, position, direction in light space.
@@ -231,6 +234,7 @@ export default class Shaders {
                 // position in light space.
                 vec3 lightDirection = (uInverseWorldMatrix * position).xyz;
                 float lightDistanceSq = dot(lightDirection, lightDirection);
+                vec3 lightDirectionNormalized = normalize(lightDirection);
                 vec3 normalLightSpace = normalize((uInverseWorldMatrix * vec4(normal, 0.0)).xyz);
 
                 // Calculate attenuation.
@@ -238,14 +242,20 @@ export default class Shaders {
                 attenuation *= attenuation;
 
                 // Diffuse
-                float diffuseFactor = max(0.0, dot(normalLightSpace, normalize(-lightDirection)));
+                float diffuseFactor =  max(0.0, dot(normalLightSpace, -lightDirectionNormalized));
                 vec3 diffuseLightColor = uLightPoint.color * uLightPoint.intensity * diffuseFactor * attenuation;
 
                 // Specular
+                float specularIntensity = positionTexel.w;
+                float specularPower = normalTexel.w;
 
+                vec3 lightReflect = reflect(lightDirectionNormalized, normalLightSpace);
+                vec3 surfaceToEye = normalize(uCameraPosLocalSpace - lightDirection);
+                float specularFactor = max(0.0, dot(surfaceToEye, lightReflect));
+                vec3 specularColor = uLightPoint.color * uLightPoint.intensity * specularIntensity * pow(specularFactor, specularPower) * attenuation;
 
-                // Combine everything.
-                fragColor = diffuse * vec4(diffuseLightColor, 1.0);// + vec4(0.0, 0.08, 0.0, 1.0);
+                // Total
+                fragColor = diffuse * vec4(diffuseLightColor, 1.0) + vec4(specularColor, 1.0);// + vec4(1.0, 0.08, 0.0, 1.0);
             }`;
 
         const attributes = [AttributeName.VertexPosition];
@@ -253,6 +263,7 @@ export default class Shaders {
             UniformName.ProjectionViewMatrix,
             UniformName.WorldMatrix,
             UniformName.InverseWorldMatrix,
+            UniformName.CameraPositionLocalSpace,
             UniformName.TextureSampler0,
             UniformName.TextureSampler1,
             UniformName.TextureSampler2,

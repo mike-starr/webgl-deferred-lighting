@@ -174,7 +174,8 @@ export default class MeshLoader {
 
     static loadSphere(gl: WebGL2RenderingContext,
         stacks: number,
-        slices: number): Mesh {
+        slices: number,
+        radius: number = 1.0): Mesh {
 
         const vertices = [];
         const indices = [];
@@ -190,9 +191,9 @@ export default class MeshLoader {
                 const sliceAngleSin = Math.sin(sliceAngle);
                 const sliceAngleCos = Math.cos(sliceAngle);
 
-                const x = sliceAngleSin * stackAngleSin;
-                const y = stackAngleCos;
-                const z = sliceAngleCos * stackAngleSin;
+                const x = sliceAngleSin * stackAngleSin * radius;
+                const y = stackAngleCos * radius;
+                const z = sliceAngleCos * stackAngleSin * radius;
 
                 vertices.push(x, y, z);
                 normals.push(x, y, z);

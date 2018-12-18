@@ -1,4 +1,4 @@
-import { mat4 } from "gl-matrix";
+import { mat4, vec3 } from "gl-matrix";
 import SceneGraphVisitor from "../scenegraph/SceneGraphVisitor";
 import SceneGraphNode from "../scenegraph/SceneGraphNode";
 import { UniformName } from "../shaders/ShaderDescription";
@@ -10,6 +10,7 @@ import DirectionalLightVolume from "../lighting/DirectionalLightVolume";
 import LightVolume from "../lighting/LightVolume";
 import ShaderProgram from "../shaders/ShaderProgram";
 import Shaders from "../shaders/Shaders";
+import Camera from "../camera/Camera";
 
 enum PassType {
     None,
@@ -20,7 +21,7 @@ enum PassType {
 
 export default class Renderer implements SceneGraphVisitor {
     private worldMatrixStack: mat4[] = [];
-    private projectionViewMatrixStack: mat4[] = [];
+    private cameraStack: Camera[] = [];
     private currentWorldMatrix: mat4 = mat4.create();
     private stencilPassShader: ShaderProgram;
     private passType: PassType = PassType.None;
@@ -93,12 +94,12 @@ export default class Renderer implements SceneGraphVisitor {
         sceneGraphRoot.accept(this);
     }
 
-    pushProjectionViewMatrix(projectionViewMatrix: mat4): void {
-        this.projectionViewMatrixStack.push(projectionViewMatrix);
+    pushCamera(camera: Camera): void {
+        this.cameraStack.push(camera);
     }
 
-    popProjectionViewMatrix(): void {
-        this.projectionViewMatrixStack.pop();
+    popCamera(): void {
+        this.cameraStack.pop();
     }
 
     pushWorldMatrix(worldMatrix: mat4): void {
@@ -225,6 +226,11 @@ export default class Renderer implements SceneGraphVisitor {
         const worldMatrix = mat4.create();
         mat4.mul(worldMatrix, this.currentWorldMatrix, renderable.localTransform);
 
+        const inverseWorldMatrix = mat4.create();
+        mat4.invert(inverseWorldMatrix, worldMatrix);
+
+        const camera = this.cameraStack[this.cameraStack.length - 1];
+
         for (const attribute of shader.description.attributes) {
             const vertexAttribute = mesh.vertexAttributeMap.get(attribute.name);
             if (!vertexAttribute) {
@@ -246,7 +252,7 @@ export default class Renderer implements SceneGraphVisitor {
                 case UniformName.ProjectionViewMatrix:
                     this.gl.uniformMatrix4fv(uniform.location,
                         false,
-                        this.projectionViewMatrixStack[this.projectionViewMatrixStack.length - 1]);
+                        camera.projectionViewMatrix);
                     break;
 
                 case UniformName.WorldMatrix:
@@ -256,13 +262,16 @@ export default class Renderer implements SceneGraphVisitor {
                     break;
 
                 case UniformName.InverseWorldMatrix:
-                    {
-                        const inverseWorldMatrix = mat4.create();
-                        mat4.invert(inverseWorldMatrix, worldMatrix);
+                    this.gl.uniformMatrix4fv(uniform.location,
+                        false,
+                        inverseWorldMatrix);
+                    break;
 
-                        this.gl.uniformMatrix4fv(uniform.location,
-                            false,
-                            inverseWorldMatrix);
+                    case UniformName.CameraPositionLocalSpace:
+                    {
+                        const cameraPosLocalSpace = vec3.create();
+                        vec3.transformMat4(cameraPosLocalSpace, camera.eyePoint, inverseWorldMatrix);
+                        this.gl.uniform3fv(uniform.location, cameraPosLocalSpace)
                     }
                     break;
 

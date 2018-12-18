@@ -31,6 +31,13 @@ export default class Camera {
         return this._projectionViewMatrix;
     }
 
+    public get eyePoint(): vec3 {
+        const eyePoint = vec3.create();
+        mat4.getTranslation(eyePoint, this.viewMatrix);
+        vec3.negate(eyePoint, eyePoint);
+        return eyePoint;
+    }
+
     setProjectionOrthographic(left: number, right: number, bottom: number,
         top: number, near: number, far: number) {
         mat4.ortho(this.projectionMatrix, left, right, bottom, top, near, far);

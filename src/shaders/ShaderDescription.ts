@@ -13,6 +13,7 @@ export enum UniformName {
     ProjectionViewMatrix = "uProjectionViewMatrix",
     WorldMatrix = "uWorldMatrix",
     InverseWorldMatrix = "uInverseWorldMatrix",
+    CameraPositionLocalSpace = "uCameraPosLocalSpace",
     TextureSampler0 = "uTextureSampler0",
     TextureSampler1 = "uTextureSampler1",
     TextureSampler2 = "uTextureSampler2",
@@ -22,7 +23,7 @@ export enum UniformName {
     MaterialDiffuseColor = "uMaterial.diffuseColor",
     MaterialEmissiveColor = "uMaterial.emissiveColor",
     MaterialSpecularIntensity = "uMaterial.specularIntensity",
-    MaterialSpecularPower = "uMaterial.specularIntensity",
+    MaterialSpecularPower = "uMaterial.specularPower",
 
     // directional light
     LightDirectional_Color = "uLightDirectional.color",

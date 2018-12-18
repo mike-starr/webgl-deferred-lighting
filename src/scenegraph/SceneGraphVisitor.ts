@@ -2,10 +2,11 @@ import { mat4 } from "gl-matrix";
 import SceneGraphGPassNode from "./SceneGraphGPassNode";
 import SceneGraphLightPassNode from "./SceneGraphLightPassNode";
 import Renderable from "../renderer/Renderable";
+import Camera from "../camera/Camera";
 
 export default interface SceneGraphVisitor {
-    pushProjectionViewMatrix(projectionViewMatrix: mat4): void;
-    popProjectionViewMatrix(): void;
+    pushCamera(camera: Camera): void;
+    popCamera(): void;
     pushWorldMatrix(worldMatrix: mat4): void;
     popWorldMatrix(): void;
     beginGPass(node: SceneGraphGPassNode): void;
