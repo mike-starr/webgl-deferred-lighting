@@ -17,7 +17,7 @@ I've glossed over a fair bit in that overview, which I'll remedy below with a mo
 
 ## Details
 
-### The Framework
+### Framework
 
 Before we can implement any kind of rendering algorithm, some sort of graphics pipeline abstraction is required. The system needs to understand what it's trying to render: what a mesh, shader, camera, and light is, how to get vertex positions and other attributes into buffers, how to map those buffers to shader variables, get shader uniforms populated correctly, etc.
 
@@ -32,6 +32,8 @@ It's a simple model that works well enough for the purposes of demonstrating the
 ### G-Buffer Setup
 
 Now that we have a framework for creating geometry, associating it with a shader, and rendering it an organized way, we can start implementing the specifics of the deferred algorithm - the first step of which is to create the render targets that our initial geometry pass will use as outputs, collectively called the g-buffer.
+
+In WebGL terms, this means creating a separate framebuffer and attaching multiple color targets.
 
 
 
