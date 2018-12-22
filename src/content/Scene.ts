@@ -29,29 +29,29 @@ export default abstract class Scene {
         const texturedShader = Shaders.makeTextureShader(gl);
         const texturedDepthShader = Shaders.makeTextureShader(gl, true);
 
-        const quadNodeUpperLeft = new SceneGraphMeshNode({
+        const quadNodeTop = new SceneGraphMeshNode({
             mesh: MeshLoader.loadTexturedQuad(gl, -1.0, -0.5, 0.5, 1.0),
             localTransform: mat4.create(),
             textures: [gBufferTextures.diffuseTexture],
             material: MaterialBuilder.default,
             shaderProgram: texturedShader
         });
-        const quadNodeLowerLeft = new SceneGraphMeshNode({
-            mesh: MeshLoader.loadTexturedQuad(gl, -1.0, -0.5, -1.0, -0.5),
+        const quadNodeMidUpper = new SceneGraphMeshNode({
+            mesh: MeshLoader.loadTexturedQuad(gl, -1.0, -0.5, 0.0, 0.5),
             localTransform: mat4.create(),
             textures: [gBufferTextures.positionTexture],
             material: MaterialBuilder.default,
             shaderProgram: texturedShader
         });
-        const quadNodeUpperRight = new SceneGraphMeshNode({
-            mesh: MeshLoader.loadTexturedQuad(gl, 0.5, 1.0, 0.5, 1.0),
+        const quadNodeMidBottom = new SceneGraphMeshNode({
+            mesh: MeshLoader.loadTexturedQuad(gl, -1.0, -0.5, -0.5, 0.0),
             localTransform: mat4.create(),
             textures: [gBufferTextures.normalTexture],
             material: MaterialBuilder.default,
             shaderProgram: texturedShader
         });
-        const quadNodeLowerRight = new SceneGraphMeshNode({
-            mesh: MeshLoader.loadTexturedQuad(gl, 0.5, 1.0, -1.0, -0.5),
+        const quadNodeBottom = new SceneGraphMeshNode({
+            mesh: MeshLoader.loadTexturedQuad(gl, -1.0, -0.5, -1.0, -0.5),
             localTransform: mat4.create(),
             textures: [gBufferTextures.depthTexture],
             material: MaterialBuilder.default,
@@ -69,7 +69,7 @@ export default abstract class Scene {
         const camera2d = new Camera();
         camera2d.setProjectionOrthographic(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0);
 
-        const cameraNode = new SceneGraphCameraNode(camera2d, [quadNodeFullScreen, quadNodeUpperLeft, quadNodeLowerLeft, quadNodeUpperRight, quadNodeLowerRight]);
+        const cameraNode = new SceneGraphCameraNode(camera2d, [quadNodeFullScreen, quadNodeTop, quadNodeMidUpper, quadNodeMidBottom, quadNodeBottom]);
         return new SceneGraphNormalPassNode([cameraNode]);
     }
 

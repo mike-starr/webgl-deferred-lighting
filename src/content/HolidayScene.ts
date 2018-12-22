@@ -54,20 +54,20 @@ export default class HolidayScene extends Scene {
         mat4.translate(treeTransform, treeTransform, [2.8, 0.0, -1.7]);
         const tree = new SceneGraphTransformNode(treeTransform, [this.makeTree(gl)]);
 
-        const pointLight = this.makePointLight(gl, 0.5, vec3.fromValues(1.0, 1.0, 1.0), 1.0);
-        const orbit = this.makeOrbit(2.0, [pointLight, pointLight, pointLight,pointLight,pointLight,pointLight]);
+        const pointLight = this.makePointLight(gl, 0.8, vec3.fromValues(1.0, 1.0, 1.0), 0.6, false, false);
+        const orbit = this.makeOrbit(1.1, [pointLight]);
         const orbitTransform = mat4.create();
-        mat4.translate(orbitTransform, orbitTransform, [0.0, 0.2, 0.0]);
-        this.animations.push(new RotationAnimation(orbitTransform, Math.PI / 4));
+        mat4.translate(orbitTransform, orbitTransform, [2.8, 0.2, -1.9]);
+        this.animations.push(new RotationAnimation(orbitTransform, Math.PI / 12));
         const orbitTransformNode = new SceneGraphTransformNode(orbitTransform, [orbit]);
 
         const directionalLightVolumeTransform = mat4.create();
         mat4.fromRotationTranslationScale(directionalLightVolumeTransform, quat.create(), [0.0, 0.0, 0.0], [100.0, 100.0, 7.0]);
 
         const directionalLightVolumeNode = new SceneGraphLightNode(<DirectionalLightVolume> {
-            color: vec3.fromValues(1.0, 1.0, 1.0),
+            color: vec3.fromValues(1.0, 1.0, 0.8),
             direction: vec3.fromValues(0.4, -0.5, -1.0),
-            intensity: 0.15,
+            intensity: 0.2,
             mesh: MeshLoader.loadCube(gl, 0.5),
             localTransform: directionalLightVolumeTransform,
             textures: this.lightPassTextures,
@@ -79,7 +79,7 @@ export default class HolidayScene extends Scene {
         const pointLightVolumeNode = new SceneGraphTransformNode(pointLightVolumeTransform, [this.makePointLight(gl, 1.8, vec3.fromValues(1.0, 1.0, 1.0), 1.0)]);
 
         const rootTransform = mat4.create();
-        const rootTransformNode = new SceneGraphTransformNode(rootTransform, [room, tree, orbitTransformNode, /*pointLightVolumeNode,*/ directionalLightVolumeNode]);
+        const rootTransformNode = new SceneGraphTransformNode(rootTransform, [room, tree, /*orbitTransformNode, pointLightVolumeNode,*/ directionalLightVolumeNode]);
 
         const mainCamera = new Camera();
         mainCamera.setLookAt(vec3.fromValues(-1.0, 1.5, 3.0), vec3.fromValues(3.5, 0.8, -4.0), vec3.fromValues(0.0, 1.0, 0.0));
@@ -155,17 +155,26 @@ export default class HolidayScene extends Scene {
         mat4.fromTranslation(lightTransform, [0.0, (treeHeight / 2.0) + stumpHeight, 0.0]);
         const treeLights = new SceneGraphTransformNode(lightTransform, [this.makeTreeLights(gl, treeHeight, treeWidth)]);
 
-        const present1 = this.makePresent(gl, vec3.fromValues(0.1, 0.1, 0.7), vec3.fromValues(0.8, 0.1, 0.1), 1.0, .3, .4);
+        const present1 = this.makePresent(gl, vec3.fromValues(0.3, 0.3, 0.9), vec3.fromValues(0.8, 0.1, 0.1), 0.8, .3, .4);
         const presentTransform1 = mat4.create();
-        mat4.fromTranslation(presentTransform1, [0.0, 0.15, 1.6]);
+        const presentRotation1 = quat.create();
+        quat.fromEuler(presentRotation1, 0.0, 110.0, 0.0);
+        mat4.fromRotationTranslation(presentTransform1, presentRotation1, [-0.7, 0.15, 0.0]);
         const presentNode1 = new SceneGraphTransformNode(presentTransform1, [present1]);
 
-        const present2 = this.makePresent(gl, vec3.fromValues(0.8, 0.2, 0.8), vec3.fromValues(0.1, 0.7, 0.1), .4, .4, .4);
+        const present2 = this.makePresent(gl, vec3.fromValues(0.2, 0.6, 0.2), vec3.fromValues(0.75, 0.75, 0.75), .4, .3, .4);
         const presentTransform2 = mat4.create();
-        mat4.fromTranslation(presentTransform2, [1.0, 0.2, 1.1]);
+        const presentRotation2 = quat.create();
+        mat4.fromRotationTranslation(presentTransform2, presentRotation2, [0.3, 0.15, 0.5]);
         const presentNode2 = new SceneGraphTransformNode(presentTransform2, [present2]);
 
-        return new SceneGraphNode([treeLights, stumpNode, treeNode, treeNode2, presentNode1, presentNode2, new SceneGraphTransformNode(starTransform, [starNode])]);
+        const present3 = this.makePresent(gl, vec3.fromValues(1.0, 1.0, 1.0), vec3.fromValues(0.8, 0.0, 0.8), .3, .2, .3);
+        const presentTransform3 = mat4.create();
+        const presentRotation3 = quat.create();
+        mat4.fromRotationTranslation(presentTransform3, presentRotation3, [-0.2, 0.1, 0.5]);
+        const presentNode3 = new SceneGraphTransformNode(presentTransform3, [present3]);
+
+        return new SceneGraphNode([treeLights, stumpNode, treeNode, treeNode2, presentNode1, presentNode2, presentNode3, new SceneGraphTransformNode(starTransform, [starNode])]);
     }
 
     private makeTreeLights(gl: WebGL2RenderingContext, treeHeight: number, treeWidth: number) {
@@ -203,12 +212,21 @@ export default class HolidayScene extends Scene {
                 x += Math.random() * jitterMax - (jitterMax / 2);
                 y += Math.random() * jitterMax - (jitterMax / 2);
 
+                y = Math.max(y, -treeHeight / 2.0);
+
                 const transform = mat4.create();
-                mat4.fromTranslation(transform, [x, y, treeWidth / 2.0 + 0.04 - zOffset]);
+                const rotation = quat.create();
+                quat.fromEuler(rotation, 0.0, Math.random() * 180, Math.random() * 180);
+                mat4.fromRotationTranslationScale(transform, rotation, [x, y, treeWidth / 2.0 + 0.04 - zOffset], [1.6, 1.0, 1.0]);
 
                 const color = this.lightColors[Math.floor(Math.random() * this.lightColors.length)];
 
-                const light = this.makePointLight(gl, 0.4, color, 1.0, true);
+                let radius = 0.4;
+                if (y <= -treeHeight / 2.0 + jitterMax) {
+                    radius = 0.5;
+                }
+
+                const light = this.makePointLight(gl, radius, color, 0.9, true);
                 lightNodes.push(new SceneGraphTransformNode(transform, [light]));
             }
         }
@@ -284,7 +302,7 @@ export default class HolidayScene extends Scene {
         return new SceneGraphNode([bottomNode, topNode, leftNode, frontNode, backNode, rightNode, centerNode, orbitTransformNode, orbitTransformNode2]);
     }
 
-    private makePointLight(gl: WebGL2RenderingContext, radius: number, color: vec3, intensity: number, animateIntensity: boolean = false): SceneGraphNode {
+    private makePointLight(gl: WebGL2RenderingContext, radius: number, color: vec3, intensity: number, animateIntensity: boolean = false, createSource = true): SceneGraphNode {
         const emitterRadiusScale = 0.05;
         const pointLightTransform = mat4.create();
         mat4.fromScaling(pointLightTransform, [radius, radius, radius]);
@@ -320,7 +338,13 @@ export default class HolidayScene extends Scene {
             shaderProgram: this.gPassShader as ShaderProgram
         }
 
-        return new SceneGraphTransformNode(pointLightTransform, [pointLightVolumeNode, new SceneGraphMeshNode(emitterSphere)]);
+        const children: SceneGraphNode[] = [pointLightVolumeNode];
+
+        if (createSource) {
+            children.push(new SceneGraphMeshNode(emitterSphere));
+        }
+
+        return new SceneGraphTransformNode(pointLightTransform, children);
     }
 
     private makeOrbit(radius: number, nodes: SceneGraphNode[]): SceneGraphNode {
