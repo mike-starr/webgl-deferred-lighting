@@ -3,14 +3,16 @@ import Renderer from "../renderer/Renderer";
 import Scene from "../content/Scene";
 import BasicScene from "../content/BasicScene";
 import HolidayScene from "../content/HolidayScene";
+import BigBangScene from "../content/BigBangScene";
 
 export default class SceneComponent extends React.Component<{}, {}> {
     private readonly canvasElementId = "webgl-canvas";
 
     private frameId: number = 0;
     private renderer: Renderer | null = null;
-    private scene: Scene = new HolidayScene();
+    //private scene: Scene = new HolidayScene();
     //private scene: Scene = new BasicScene();
+    private scene: Scene = new BigBangScene();
     private lastFrameTime: DOMHighResTimeStamp = 0;
 
     constructor(props: any) {

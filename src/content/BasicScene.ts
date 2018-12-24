@@ -53,7 +53,7 @@ export default class BasicScene extends Scene {
         const lightPassTextures = [gBuffer.positionTexture, gBuffer.normalTexture, gBuffer.diffuseTexture];
 
         const directionalLightVolumeTransform = mat4.create();
-        mat4.fromRotationTranslationScale(directionalLightVolumeTransform, quat.create(), [0.0, 0.0, -50.2], [100.0, 100.0, 100.0]);
+        mat4.fromRotationTranslationScale(directionalLightVolumeTransform, quat.create(), [0.0, 0.0, 0.0], [50.0, 50.0, 50.0]);
 
         const directionalLightVolumeNode = new SceneGraphLightNode(<DirectionalLightVolume> {
             color: vec3.fromValues(1.0, 1.0, 1.0),
