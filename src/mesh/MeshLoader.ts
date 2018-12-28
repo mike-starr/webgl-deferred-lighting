@@ -2,6 +2,7 @@ import { AttributeName } from "../shaders/ShaderDescription";
 import MeshVertexAttribute from "./MeshVertexAttribute";
 import Mesh from "./Mesh";
 import MeshIndexBufferDescription from "./MeshIndexBufferDescription";
+import { vec3 } from "gl-matrix";
 
 export default class MeshLoader {
 
@@ -60,30 +61,17 @@ export default class MeshLoader {
         };
     }
 
-    static loadCube(gl: WebGL2RenderingContext,
-        halfExtent: number,
-        pyramidMode: boolean = false): Mesh {
-
-        const pyramidAdjuster = pyramidMode ? 0 : 1;
-
+    static loadPyramid(gl: WebGL2RenderingContext, halfExtent: number): Mesh {
         const vertices = [
             // Front face.
             -halfExtent, -halfExtent, halfExtent,
             halfExtent, -halfExtent, halfExtent,
-            halfExtent * pyramidAdjuster, halfExtent, halfExtent * pyramidAdjuster,
-            -halfExtent * pyramidAdjuster, halfExtent, halfExtent * pyramidAdjuster,
+            0.0, halfExtent, 0.0,
 
             // Back face.
             halfExtent, -halfExtent, -halfExtent,
             -halfExtent, -halfExtent, -halfExtent,
-            -halfExtent * pyramidAdjuster, halfExtent, -halfExtent * pyramidAdjuster,
-            halfExtent * pyramidAdjuster, halfExtent, -halfExtent * pyramidAdjuster,
-
-            // Top face.
-            -halfExtent * pyramidAdjuster, halfExtent, halfExtent * pyramidAdjuster,
-            halfExtent * pyramidAdjuster, halfExtent, halfExtent * pyramidAdjuster,
-            halfExtent * pyramidAdjuster, halfExtent, -halfExtent * pyramidAdjuster,
-            -halfExtent * pyramidAdjuster, halfExtent, -halfExtent * pyramidAdjuster,
+            0.0, halfExtent, 0.0,
 
             // Bottom face.
             halfExtent, -halfExtent, halfExtent,
@@ -93,14 +81,119 @@ export default class MeshLoader {
 
             // Left face.
             -halfExtent, -halfExtent, halfExtent,
-            -halfExtent * pyramidAdjuster, halfExtent, halfExtent * pyramidAdjuster,
-            -halfExtent * pyramidAdjuster, halfExtent, -halfExtent * pyramidAdjuster,
+            0.0, halfExtent, 0.0,
             -halfExtent, -halfExtent, -halfExtent,
 
             // Right face.
             halfExtent, -halfExtent, -halfExtent,
-            halfExtent * pyramidAdjuster, halfExtent, -halfExtent * pyramidAdjuster,
-            halfExtent * pyramidAdjuster, halfExtent, halfExtent * pyramidAdjuster,
+            0.0, halfExtent, 0.0,
+            halfExtent, -halfExtent, halfExtent,
+        ];
+
+        const frontNormal = vec3.create();
+        vec3.cross(frontNormal, [1.0, 0.0, 0.0], [-0.5, 1.0, -0.5]);
+        vec3.normalize(frontNormal, frontNormal);
+
+        const backNormal = vec3.create();
+        vec3.cross(backNormal, [-1.0, 0.0, 0.0], [0.5, 1.0, 0.5]);
+        vec3.normalize(backNormal, backNormal);
+
+        const leftNormal = vec3.create();
+        vec3.cross(leftNormal, [0.0, 0.0, 1.0], [0.5, 1.0, -0.5]);
+        vec3.normalize(leftNormal, leftNormal);
+
+        const rightNormal = vec3.create();
+        vec3.cross(rightNormal, [0.0, 0.0, -1.0], [-0.5, 1.0, 0.5]);
+        vec3.normalize(rightNormal, rightNormal);
+
+        const normals = [
+            ...frontNormal,
+            ...frontNormal,
+            ...frontNormal,
+
+            ...backNormal,
+            ...backNormal,
+            ...backNormal,
+
+            0.0, -1.0, 0.0,
+            0.0, -1.0, 0.0,
+            0.0, -1.0, 0.0,
+            0.0, -1.0, 0.0,
+
+            ...leftNormal,
+            ...leftNormal,
+            ...leftNormal,
+
+            ...rightNormal,
+            ...rightNormal,
+            ...rightNormal,
+        ];
+
+        const indices = [
+            // front face
+            0, 1, 2,
+
+            // back face
+            3, 4, 5,
+
+            // bottom face
+            6, 7, 8,
+            8, 9, 6,
+
+            // left face
+            10, 11, 12,
+
+            // right face
+            13, 14, 15
+        ];
+
+        const vertexAttributeMap = new Map<AttributeName, MeshVertexAttribute>();
+        vertexAttributeMap.set(AttributeName.VertexPosition, this.createPositionAttribute(gl, vertices));
+        vertexAttributeMap.set(AttributeName.VertexNormal, this.createNormalAttribute(gl, normals));
+
+        return {
+            vertexAttributeMap: vertexAttributeMap,
+            indexBufferDescription: this.createIndexBufferDescription(gl, indices)
+        };
+
+    }
+
+    static loadCube(gl: WebGL2RenderingContext, halfExtent: number): Mesh {
+        const vertices = [
+            // Front face.
+            -halfExtent, -halfExtent, halfExtent,
+            halfExtent, -halfExtent, halfExtent,
+            halfExtent, halfExtent, halfExtent,
+            -halfExtent, halfExtent, halfExtent,
+
+            // Back face.
+            halfExtent, -halfExtent, -halfExtent,
+            -halfExtent, -halfExtent, -halfExtent,
+            -halfExtent, halfExtent, -halfExtent,
+            halfExtent, halfExtent, -halfExtent,
+
+            // Top face.
+            -halfExtent, halfExtent, halfExtent,
+            halfExtent, halfExtent, halfExtent,
+            halfExtent, halfExtent, -halfExtent,
+            -halfExtent, halfExtent, -halfExtent,
+
+            // Bottom face.
+            halfExtent, -halfExtent, halfExtent,
+            -halfExtent, -halfExtent, halfExtent,
+            -halfExtent, -halfExtent, -halfExtent,
+            halfExtent, -halfExtent, -halfExtent,
+
+            // Left face.
+            -halfExtent, -halfExtent, halfExtent,
+            -halfExtent, halfExtent, halfExtent,
+            -halfExtent, halfExtent, -halfExtent,
+            -halfExtent, -halfExtent, -halfExtent,
+
+            // Right face.
+            halfExtent, -halfExtent, -halfExtent,
+            halfExtent, halfExtent, -halfExtent,
+            halfExtent, halfExtent, halfExtent,
             halfExtent, -halfExtent, halfExtent,
         ];
 

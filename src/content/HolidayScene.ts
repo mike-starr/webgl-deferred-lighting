@@ -121,9 +121,9 @@ export default class HolidayScene extends Scene {
 
     private makeTree(gl: WebGL2RenderingContext): SceneGraphNode {
         const cube = MeshLoader.loadCube(gl, 0.5);
-        const pyramid = MeshLoader.loadCube(gl, 0.5, true);
+        const pyramid = MeshLoader.loadPyramid(gl, 0.5);
         const brownMaterial = new MaterialBuilder().withDiffuseColor(vec3.fromValues(.4, .26, .13)).build();
-        const greenMaterial = new MaterialBuilder().withDiffuseColor(vec3.fromValues(0.4, 1.0, 0.6)).build();
+        const greenMaterial = new MaterialBuilder().withDiffuseColor(vec3.fromValues(0.2, 0.5, 0.3)).build();
 
         const stumpWidth = 0.3;
         const stumpHeight = 0.4;
@@ -221,9 +221,9 @@ export default class HolidayScene extends Scene {
 
                 const color = this.lightColors[Math.floor(Math.random() * this.lightColors.length)];
 
-                let radius = 0.4;
+                let radius = 0.3;
                 if (y <= -treeHeight / 2.0 + jitterMax) {
-                    radius = 0.5;
+                    radius = 0.4;
                 }
 
                 const light = this.makePointLight(gl, radius, color, 0.9, true);
@@ -236,11 +236,11 @@ export default class HolidayScene extends Scene {
 
     private makeStar(gl: WebGL2RenderingContext) {
         const goldMaterial = new MaterialBuilder()
-        .withDiffuseColor(vec3.fromValues(.81, .71, .23))
-        .withSpecularIntensity(1.0)
-        .withSpecularPower(10)
-        .build();
-        const goldPyramid = MeshLoader.loadCube(gl, 0.5, true);
+            .withDiffuseColor(vec3.fromValues(.81, .71, .23))
+            .withSpecularIntensity(1.0)
+            .withSpecularPower(10)
+            .build();
+        const goldPyramid = MeshLoader.loadPyramid(gl, 0.5);
         const goldCube = MeshLoader.loadCube(gl, 0.5);
 
         const pointHeight = 0.17;
@@ -286,20 +286,25 @@ export default class HolidayScene extends Scene {
         const centerNode = new SceneGraphMeshNode(this.makeCubeRenderable(centerTransform, goldCube, goldMaterial));
 
         const pointLight = this.makePointLight(gl, 0.3, vec3.fromValues(1.0, 1.0, 1.0), 1.0);
-        const orbit = this.makeOrbit(0.18, [pointLight, pointLight, pointLight]);
 
+        const orbit = this.makeOrbit(pointHeight + .1, [pointLight, pointLight, pointLight, pointLight]);
         const orbitTransform = mat4.create();
-        mat4.translate(orbitTransform, orbitTransform, [0.0, -pointHeight / 2.0, 0.0]);
-        this.animations.push(new RotationAnimation(orbitTransform,  Math.PI ));
+        this.animations.push(new RotationAnimation(orbitTransform, .5 * Math.PI ));
 
+        const orbit2 = this.makeOrbit(0.1, [pointLight, pointLight, pointLight]);
         const orbitTransform2 = mat4.create();
-        mat4.translate(orbitTransform2, orbitTransform2, [0.0, pointHeight / 2.0, 0.0]);
+        mat4.translate(orbitTransform2, orbitTransform2, [0.0, pointHeight, 0.0]);
         this.animations.push(new RotationAnimation(orbitTransform2, .8 * Math.PI));
 
-        const orbitTransformNode = new SceneGraphTransformNode(orbitTransform, [orbit]);
-        const orbitTransformNode2 = new SceneGraphTransformNode(orbitTransform2, [orbit]);
+        const orbitTransform3 = mat4.create();
+        mat4.translate(orbitTransform3, orbitTransform3, [0.0, -pointHeight / 1.5, 0.0]);
+        this.animations.push(new RotationAnimation(orbitTransform3, .8 * Math.PI));
 
-        return new SceneGraphNode([bottomNode, topNode, leftNode, frontNode, backNode, rightNode, centerNode, orbitTransformNode, orbitTransformNode2]);
+        const orbitTransformNode = new SceneGraphTransformNode(orbitTransform, [orbit]);
+        const orbitTransformNode2 = new SceneGraphTransformNode(orbitTransform2, [orbit2]);
+        const orbitTransformNode3 = new SceneGraphTransformNode(orbitTransform3, [orbit2]);
+
+        return new SceneGraphNode([bottomNode, topNode, leftNode, frontNode, backNode, rightNode, centerNode, orbitTransformNode, orbitTransformNode2, orbitTransformNode3]);
     }
 
     private makePointLight(gl: WebGL2RenderingContext, radius: number, color: vec3, intensity: number, animateIntensity: boolean = false, createSource = true): SceneGraphNode {

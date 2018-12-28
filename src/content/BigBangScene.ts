@@ -48,7 +48,8 @@ export default class BigBangScene extends Scene {
         this.lightPassTextures = [this.gBuffer.positionTexture, this.gBuffer.normalTexture, this.gBuffer.diffuseTexture];
         const lightPassFrameBuffer = Renderer.createLightPassFrameBuffer(gl, this.gBuffer.accumulationTexture, this.gBuffer.depthTexture);
 
-        const room = this.makeRoom(gl);
+        //const background = this.makeRoom(gl);
+        const background = this.makeBackground(gl);
 
         const directionalLightVolumeTransform = mat4.create();
         mat4.fromRotationTranslationScale(directionalLightVolumeTransform, quat.create(), [0.0, 0.0, 0.0], [100.0, 100.0, 50.0]);
@@ -56,7 +57,7 @@ export default class BigBangScene extends Scene {
         const directionalLightVolumeNode = new SceneGraphLightNode(<DirectionalLightVolume> {
             color: vec3.fromValues(1.0, 1.0, 1.0),
             direction: vec3.fromValues(0.0, -0.0, -1.0),
-            intensity: 0.1,
+            intensity: 0.0,
             mesh: MeshLoader.loadCube(gl, 0.5),
             localTransform: directionalLightVolumeTransform,
             textures: this.lightPassTextures,
@@ -64,14 +65,14 @@ export default class BigBangScene extends Scene {
         });
 
         const pointLightTransform = mat4.create();
-        mat4.fromTranslation(pointLightTransform, [0.0, 0.0, 0.05]);
+        mat4.fromTranslation(pointLightTransform, [0.0, 0.0, 0.0]);
 
-        const lights = this.generateLights(gl, 250);
+        const lights = this.generateLights(gl, 150);
 
         const pointLightTransformNode = new SceneGraphTransformNode(pointLightTransform, [lights]);
 
         const rootTransform = mat4.create();
-        const rootTransformNode = new SceneGraphTransformNode(rootTransform, [pointLightTransformNode, directionalLightVolumeNode, room]);
+        const rootTransformNode = new SceneGraphTransformNode(rootTransform, [pointLightTransformNode, directionalLightVolumeNode, background]);
 
         const mainCamera = new Camera();
         mainCamera.setLookAt(vec3.fromValues(-0.7, 0.0, 3.75), vec3.fromValues(-0.7, 0.0, 0.0), vec3.fromValues(0.0, 1.0, 0.0));
@@ -89,14 +90,64 @@ export default class BigBangScene extends Scene {
 
         const backWallTransform = mat4.create();
         mat4.fromRotationTranslationScale(backWallTransform, quat.create(), [0.0, 0.0, 0.0], [4.0, 3.0, 0.01]);
-        const backWallNode = new SceneGraphMeshNode(this.makeCubeRenderable(backWallTransform, cubeMesh));
+
+        const wallMaterial = new MaterialBuilder()
+            .withDiffuseColor(vec3.fromValues(0.0, 0.0, 0.0))
+            .withSpecularIntensity(0.8)
+            .withSpecularPower(2).build();
+
+        const backWallNode = new SceneGraphMeshNode(this.makeCubeRenderable(backWallTransform, cubeMesh, wallMaterial));
 
         return new SceneGraphNode([backWallNode]);
     }
 
+    private makeBackground(gl: WebGL2RenderingContext) {
+        const wallWidth = 4.0;
+        const wallHeight = 4.0;
+        const cubeWidth = 0.2;
+        const padding = cubeWidth / 10.0;
+        const cubeNodes: SceneGraphNode[] = [];
+
+        const cubeMesh = MeshLoader.loadPyramid(gl, 0.5);
+
+        const cubeMaterial = new MaterialBuilder()
+            .withDiffuseColor(vec3.fromValues(0.4, 0.4, 0.4))
+            .withSpecularIntensity(1.0)
+            .withSpecularPower(2)
+            .build();
+
+        const cubeLocalTransform = mat4.create();
+        const cubeLocalRotation = quat.create();
+        quat.fromEuler(cubeLocalRotation, 90.0, 0.0, 0.0)
+        mat4.fromRotationTranslationScale(cubeLocalTransform, cubeLocalRotation, [0.0, 0.0, 0.0], [cubeWidth, cubeWidth, cubeWidth]);
+
+        const cubeRenderable: Renderable = {
+            mesh: cubeMesh,
+            material: cubeMaterial,
+            textures: [],
+            localTransform: cubeLocalTransform,
+            shaderProgram: this.gPassShader as ShaderProgram
+        }
+
+        const cubeNode = new SceneGraphMeshNode(cubeRenderable);
+
+        for (let x = -wallWidth / 2.0; x <= wallWidth / 2.0; x += (cubeWidth + padding)) {
+            for (let y = -wallHeight / 2.0; y <= wallHeight / 2.0; y += (cubeWidth + padding)) {
+                const transform = mat4.create();
+                mat4.fromTranslation(transform, [x, y, 0.0]);
+                cubeNodes.push(new SceneGraphTransformNode(transform, [cubeNode]));
+            }
+        }
+
+        const wallTransform = mat4.create();
+        mat4.fromTranslation(wallTransform, [0.0, 0.0, -cubeWidth / 2.0]);
+
+        return new SceneGraphTransformNode(wallTransform, cubeNodes);
+    }
+
     private generateLights(gl: WebGL2RenderingContext, count: number): SceneGraphNode {
-        const minInitialVelocity = 0.2;
-        const maxInitialVelocity = 2.0;
+        const minInitialVelocity = 0.1;
+        const maxInitialVelocity = 0.6;
 
         const lights: SceneGraphNode[] = [];
 
@@ -107,7 +158,7 @@ export default class BigBangScene extends Scene {
             const scale = minInitialVelocity + Math.random() * (maxInitialVelocity - minInitialVelocity);
             const color = this.lightColors[Math.floor(Math.random() * this.lightColors.length)];
 
-            const pointLight = this.makePointLight(gl, 0.1, color, 1.0, false, true);
+            const pointLight = this.makePointLight(gl, 0.25, color, 1.0, false, true);
             vec3.rotateZ(velocity, initialVelocity, [0.0, 0.0, 0.0], Math.random() * Math.PI * 2);
             vec3.scale(velocity, velocity, scale);
 
@@ -122,7 +173,7 @@ export default class BigBangScene extends Scene {
     }
 
     private makePointLight(gl: WebGL2RenderingContext, radius: number, color: vec3, intensity: number, animateIntensity: boolean = false, createSource = true): SceneGraphNode {
-        const emitterRadiusScale = 0.1;
+        const emitterRadiusScale = 0.03;
         const pointLightTransform = mat4.create();
         mat4.fromScaling(pointLightTransform, [radius, radius, radius]);
 
@@ -164,23 +215,6 @@ export default class BigBangScene extends Scene {
         }
 
         return new SceneGraphTransformNode(pointLightTransform, children);
-    }
-
-    private makeOrbit(radius: number, nodes: SceneGraphNode[]): SceneGraphNode {
-        const angleIncrement = 2 * Math.PI / nodes.length;
-        const transformNodes = [];
-
-        let angle = 0;
-
-        for (let i = 0; i < nodes.length; ++i) {
-            angle = i * angleIncrement;
-
-            const transform = mat4.create();
-            mat4.fromTranslation(transform, [Math.cos(angle) * radius, Math.sin(angle) * radius, 0.0]);
-            transformNodes.push(new SceneGraphTransformNode(transform, [nodes[i]]));
-        }
-
-        return new SceneGraphNode(transformNodes);
     }
 
     private makeCubeRenderable(transform: mat4, mesh: Mesh, material: Material = MaterialBuilder.default): Renderable {
