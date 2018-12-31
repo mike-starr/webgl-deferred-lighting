@@ -147,7 +147,7 @@ export default class BigBangScene extends Scene {
 
     private generateLights(gl: WebGL2RenderingContext, count: number): SceneGraphNode {
         const minInitialVelocity = 0.1;
-        const maxInitialVelocity = 0.6;
+        const maxInitialVelocity = 0.8;
 
         const lights: SceneGraphNode[] = [];
 

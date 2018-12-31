@@ -13,15 +13,10 @@ In the deferred model implemented here, the rendering pipeline is split into thr
 
 Because the lights are rendered as shapes and lighting calculations done only once per pixel each shape covers (less after a stencil-based optimization), the pipeline as a whole scales much better as more lights are added to the scene - linearly on the size of the light instead of linearly on the number of pixels or vertices.
 
-I've glossed over a fair bit in that overview, which I'll remedy below with a more detailed description.
-
 ## Details
 
 ### Framework
-
-Before we can implement any kind of rendering algorithm, some sort of graphics pipeline abstraction is required. The system needs to understand what it's trying to render: what a mesh, shader, camera, and light is, how to get vertex positions and other attributes into buffers, how to map those buffers to shader variables, get shader uniforms populated correctly, etc.
-
-I've gone with a minimal approach using a (quasi) scene graph, which the renderer class traverses using the visitor pattern.* Each node either contains an element to render or switches some state in the renderer (i.e. current camera, world transform, pass type, etc.).
+I created a basic rendering framework based on a scene graph, which the renderer traverses using the visitor pattern once per pass.*
 
 When the renderer encounters a [renderable](src/renderer/Renderable.ts) element (like a mesh or light volume), it inspects the shader attached to that element and attempts to fill in all its attributes and uniforms - from either the mesh data itself or more global state (current camera, world transform, etc.).
 
@@ -29,21 +24,28 @@ The shaders themselves are defined as [inline strings](src/shaders/Shaders.ts), 
 
 It's a simple model that works well enough for the purposes of demonstrating the deferred algorithm, but probably would not scale much beyond that.
 
-### G-Buffer Setup
+### G-Buffer
 
-Now that we have a framework for creating geometry, associating it with a shader, and rendering it an organized way, we can start implementing the specifics of the deferred algorithm - the first step of which is to create the render targets that our initial geometry pass will use as outputs, collectively called the g-buffer.
+The g-buffer is composed of four separate render targets, all the same dimension as the main framebuffer. This implementation uses the following setup:
 
-In WebGL terms, this means creating a separate framebuffer and attaching multiple color targets.
+Target | Format | X        | Y           | Z  | W |
+| - | - | - |-------------| -----| --- |
+Position | RGBA32F| position.x | position.y | position.z | specular intensity |
+Normal | RGBA32F| normal.x | normal.y | normal.z | specular power |
+Diffuse | RGB8| diffuse.r | diffuse.g | diffuse.b | N/A |
 
+WebGL requires the `EXT_color_buffer_float` extension to be enabled for floating point textures to be used as color attachments.
 
+The fourth target - the depth/stencil buffer - uses the DEPTH24_STENCIL8 format; the 8 stencil bits are used to implement an optimization during the lighting pass (described later) that avoids performing lighting calculations for pixels outside the light volumes.
 
+The fifth 'accumulation' target is created in the same format as the diffuse target. This is the target the lighting pass will use as final output; in the g-pass, it accumulates ambient and emissive lighting terms.
 
-
-
+### G-Pass
 
 ### Light
+
 
 ### Composite
 
 
-\* In 15 years as a software engineer I've never actually used the proper version of that pattern; this seemed like a good time to try.
+\* In 15 years as a software engineer I've never seen the proper version of that pattern used; this seemed like a good time to try.

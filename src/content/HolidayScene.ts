@@ -123,7 +123,7 @@ export default class HolidayScene extends Scene {
         const cube = MeshLoader.loadCube(gl, 0.5);
         const pyramid = MeshLoader.loadPyramid(gl, 0.5);
         const brownMaterial = new MaterialBuilder().withDiffuseColor(vec3.fromValues(.4, .26, .13)).build();
-        const greenMaterial = new MaterialBuilder().withDiffuseColor(vec3.fromValues(0.2, 0.5, 0.3)).build();
+        const greenMaterial = new MaterialBuilder().withDiffuseColor(vec3.fromValues(0.3, 0.5, 0.3)).build();
 
         const stumpWidth = 0.3;
         const stumpHeight = 0.4;
@@ -193,7 +193,7 @@ export default class HolidayScene extends Scene {
 
     private makeTreeLightsForOneSide(gl: WebGL2RenderingContext, treeHeight: number, treeWidth: number) {
         const lightNodes = [];
-        const lightSpacing = 0.28;
+        const lightSpacing = 0.21;
         const jitterMax = 0.09;
         const deadRadiusPct = 0.3;
 
@@ -209,7 +209,7 @@ export default class HolidayScene extends Scene {
                     continue;
                 }
 
-                x += Math.random() * jitterMax - (jitterMax / 2);
+                x += (Math.max(0.0, (0.5 - pctToTop)) * (Math.random() * jitterMax - (jitterMax / 2)));
                 y += Math.random() * jitterMax - (jitterMax / 2);
 
                 y = Math.max(y, -treeHeight / 2.0);
