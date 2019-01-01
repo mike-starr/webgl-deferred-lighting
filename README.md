@@ -3,6 +3,10 @@
 ## Why?
 Several years ago, I read a [SIGGRAPH paper](https://developer.amd.com/wordpress/media/2013/01/Chapter05-Filion-StarCraftII.pdf) detailing Stacraft 2's deferred renderer. I thought it'd be neat to implement something similar, both as an exercise in learning WebGL and a general graphics programming refresh.
 
+## Examples
+[Christmas Tree](examples/holiday/index.html?raw=true)
+150 Point Lights
+
 ## Overview
 At a high level, deferred rendering aims to overcome scaling issues with lights in the conventional graphics pipeline, which generally performs a lighting computation once per pixel (or vertex) per light in the scene.
 
@@ -40,7 +44,14 @@ The fourth target - the depth/stencil buffer - uses the DEPTH24_STENCIL8 format;
 
 The fifth 'accumulation' target is created in the same format as the diffuse target. This is the target the lighting pass will use as final output; in the g-pass, it accumulates ambient and emissive lighting terms.
 
-### G-Pass
+### Geometry Pass
+In the initial render pass - the geometry pass, all opaque geometry is rendered into the g-buffer targets.
+
+
+![Diffuse](doc/diffuse_target.png?raw=true)
+![Position](doc/position_target.png?raw=true)
+![Normal](doc/normal_target.png?raw=true)
+![Depth](doc/depth_target.png?raw=true)
 
 ### Light
 
