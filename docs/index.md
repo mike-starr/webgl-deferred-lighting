@@ -23,9 +23,9 @@ Because the lights are rendered as shapes and lighting calculations done only on
 ### Framework
 I created a basic rendering framework based on a scene graph, which the renderer traverses using the visitor pattern once per pass.<sup>*</sup>
 
-When the renderer encounters a [renderable](src/renderer/Renderable.ts) element (like a mesh or light volume), it inspects the shader attached to that element and attempts to fill in all its attributes and uniforms - from either the mesh data itself or more global state (current camera, world transform, etc.).
+When the renderer encounters a renderable element (like a mesh or light volume), it inspects the shader attached to that element and attempts to fill in all its attributes and uniforms - from either the mesh data itself or more global state (current camera, world transform, etc.).
 
-The shaders themselves are defined as [inline strings](src/shaders/Shaders.ts), followed by a [code-level description](src/shaders/ShaderDescription.ts) of their attributes and uniforms, which the renderer uses to determine what data each shader needs.
+The shaders themselves are defined as inline strings, followed by a code-level description of their attributes and uniforms, which the renderer uses to determine what data each shader needs.
 
 It's a simple model that works well enough for the purposes of demonstrating the deferred algorithm, but probably would not scale much beyond that.
 
@@ -125,4 +125,4 @@ WebGL 2 Examples: https://github.com/tsherif/webgl2examples
 
 ---
 
-\* In 15 years as a software engineer I've never seen the proper version of that pattern used; seemed like a good time to try.
+\* In 15 years as a software engineer, I've never seen the proper version of that pattern used. Seemed like a good time to try.

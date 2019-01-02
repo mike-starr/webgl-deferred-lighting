@@ -125,4 +125,4 @@ WebGL 2 Examples: https://github.com/tsherif/webgl2examples
 
 ---
 
-\* In 15 years as a software engineer I've never seen the proper version of that pattern used; seemed like a good time to try.
+\* In 15 years as a software engineer, I've never seen the proper version of that pattern used. Seemed like a good time to try.
