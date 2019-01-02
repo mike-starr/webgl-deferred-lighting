@@ -48,10 +48,10 @@ The fifth 'accumulation' target is created in the same format as the diffuse tar
 In the initial render pass - the geometry pass, all opaque geometry is rendered into the g-buffer targets.
 
 
-![Diffuse](doc/diffuse_target.png?raw=true)
-![Position](doc/position_target.png?raw=true)
-![Normal](doc/normal_target.png?raw=true)
-![Depth](doc/depth_target.png?raw=true)
+![Diffuse](docs/diffuse_target.png?raw=true)
+![Position](docs/position_target.png?raw=true)
+![Normal](docs/normal_target.png?raw=true)
+![Depth](docs/depth_target.png?raw=true)
 
 ### Light
 
