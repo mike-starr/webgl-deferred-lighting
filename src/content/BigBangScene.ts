@@ -111,7 +111,7 @@ export default class BigBangScene extends Scene {
         const cubeMesh = MeshLoader.loadPyramid(gl, 0.5);
 
         const cubeMaterial = new MaterialBuilder()
-            .withDiffuseColor(vec3.fromValues(0.4, 0.4, 0.4))
+            .withDiffuseColor(vec3.fromValues(0.8, 0.8, 0.8))
             .withSpecularIntensity(1.0)
             .withSpecularPower(2)
             .build();
