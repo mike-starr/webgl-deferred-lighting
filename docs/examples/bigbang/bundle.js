@@ -30389,7 +30389,7 @@ class MaterialBuilder {
         this.diffuseColor = gl_matrix_1.vec3.fromValues(1.0, 1.0, 1.0);
         this.emissiveColor = gl_matrix_1.vec3.fromValues(0.0, 0.0, 0.0);
         this.specularIntensity = 0.0;
-        this.specularPower = 0.0;
+        this.specularPower = 1.0;
     }
     static get default() {
         return this._default;
@@ -31579,7 +31579,7 @@ class Shaders {
 
                 vec3 lightReflect = reflect(lightDirectionNormalized, normalLightSpace);
                 vec3 surfaceToEye = normalize(uCameraPosLocalSpace - lightDirection);
-                float specularFactor = max(0.0, dot(surfaceToEye, lightReflect));
+                float specularFactor = clamp(dot(surfaceToEye, lightReflect), 0.0, 1.0);
                 vec3 specularColor = uLightPoint.color * uLightPoint.intensity * specularIntensity * pow(specularFactor, specularPower) * attenuation;
 
                 // Total

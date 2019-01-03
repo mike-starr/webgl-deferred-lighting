@@ -30026,7 +30026,7 @@ class HolidayScene extends Scene_1.default {
         const directionalLightVolumeNode = new SceneGraphLightNode_1.default({
             color: gl_matrix_1.vec3.fromValues(1.0, 1.0, 0.8),
             direction: gl_matrix_1.vec3.fromValues(0.4, -0.5, -1.0),
-            intensity: 0.2,
+            intensity: 0.15,
             mesh: MeshLoader_1.default.loadCube(gl, 0.5),
             localTransform: directionalLightVolumeTransform,
             textures: this.lightPassTextures,
@@ -30036,7 +30036,7 @@ class HolidayScene extends Scene_1.default {
         gl_matrix_1.mat4.fromTranslation(pointLightVolumeTransform, [0.0, 1.0, 1.0]);
         const pointLightVolumeNode = new SceneGraphTransformNode_1.default(pointLightVolumeTransform, [this.makePointLight(gl, 1.8, gl_matrix_1.vec3.fromValues(1.0, 1.0, 1.0), 1.0)]);
         const rootTransform = gl_matrix_1.mat4.create();
-        const rootTransformNode = new SceneGraphTransformNode_1.default(rootTransform, [room, tree, /*orbitTransformNode, pointLightVolumeNode,*/ directionalLightVolumeNode]);
+        const rootTransformNode = new SceneGraphTransformNode_1.default(rootTransform, [room, tree, directionalLightVolumeNode]);
         const mainCamera = new Camera_1.default();
         mainCamera.setLookAt(gl_matrix_1.vec3.fromValues(-1.0, 1.5, 3.0), gl_matrix_1.vec3.fromValues(3.5, 0.8, -4.0), gl_matrix_1.vec3.fromValues(0.0, 1.0, 0.0));
         const cameraNodeMain = new SceneGraphCameraNode_1.default(mainCamera, [rootTransformNode]);
@@ -30140,7 +30140,7 @@ class HolidayScene extends Scene_1.default {
                 const transform = gl_matrix_1.mat4.create();
                 const rotation = gl_matrix_1.quat.create();
                 gl_matrix_1.quat.fromEuler(rotation, 0.0, Math.random() * 180, Math.random() * 180);
-                gl_matrix_1.mat4.fromRotationTranslationScale(transform, rotation, [x, y, treeWidth / 2.0 + 0.04 - zOffset], [1.6, 1.0, 1.0]);
+                gl_matrix_1.mat4.fromRotationTranslationScale(transform, rotation, [x, y, treeWidth / 2.0 + 0.06 - zOffset], [1.6, 1.0, 1.0]);
                 const color = this.lightColors[Math.floor(Math.random() * this.lightColors.length)];
                 let radius = 0.3;
                 if (y <= -treeHeight / 2.0 + jitterMax) {
@@ -30489,7 +30489,7 @@ class MaterialBuilder {
         this.diffuseColor = gl_matrix_1.vec3.fromValues(1.0, 1.0, 1.0);
         this.emissiveColor = gl_matrix_1.vec3.fromValues(0.0, 0.0, 0.0);
         this.specularIntensity = 0.0;
-        this.specularPower = 0.0;
+        this.specularPower = 1.0;
     }
     static get default() {
         return this._default;
@@ -31679,7 +31679,7 @@ class Shaders {
 
                 vec3 lightReflect = reflect(lightDirectionNormalized, normalLightSpace);
                 vec3 surfaceToEye = normalize(uCameraPosLocalSpace - lightDirection);
-                float specularFactor = max(0.0, dot(surfaceToEye, lightReflect));
+                float specularFactor = clamp(dot(surfaceToEye, lightReflect), 0.0, 1.0);
                 vec3 specularColor = uLightPoint.color * uLightPoint.intensity * specularIntensity * pow(specularFactor, specularPower) * attenuation;
 
                 // Total

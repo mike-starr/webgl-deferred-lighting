@@ -67,7 +67,7 @@ export default class HolidayScene extends Scene {
         const directionalLightVolumeNode = new SceneGraphLightNode(<DirectionalLightVolume> {
             color: vec3.fromValues(1.0, 1.0, 0.8),
             direction: vec3.fromValues(0.4, -0.5, -1.0),
-            intensity: 0.2,
+            intensity: 0.15,
             mesh: MeshLoader.loadCube(gl, 0.5),
             localTransform: directionalLightVolumeTransform,
             textures: this.lightPassTextures,
@@ -79,7 +79,7 @@ export default class HolidayScene extends Scene {
         const pointLightVolumeNode = new SceneGraphTransformNode(pointLightVolumeTransform, [this.makePointLight(gl, 1.8, vec3.fromValues(1.0, 1.0, 1.0), 1.0)]);
 
         const rootTransform = mat4.create();
-        const rootTransformNode = new SceneGraphTransformNode(rootTransform, [room, tree, /*orbitTransformNode, pointLightVolumeNode,*/ directionalLightVolumeNode]);
+        const rootTransformNode = new SceneGraphTransformNode(rootTransform, [room, tree, directionalLightVolumeNode]);
 
         const mainCamera = new Camera();
         mainCamera.setLookAt(vec3.fromValues(-1.0, 1.5, 3.0), vec3.fromValues(3.5, 0.8, -4.0), vec3.fromValues(0.0, 1.0, 0.0));
@@ -217,7 +217,7 @@ export default class HolidayScene extends Scene {
                 const transform = mat4.create();
                 const rotation = quat.create();
                 quat.fromEuler(rotation, 0.0, Math.random() * 180, Math.random() * 180);
-                mat4.fromRotationTranslationScale(transform, rotation, [x, y, treeWidth / 2.0 + 0.04 - zOffset], [1.6, 1.0, 1.0]);
+                mat4.fromRotationTranslationScale(transform, rotation, [x, y, treeWidth / 2.0 + 0.06 - zOffset], [1.6, 1.0, 1.0]);
 
                 const color = this.lightColors[Math.floor(Math.random() * this.lightColors.length)];
 

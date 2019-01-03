@@ -6,7 +6,7 @@ export default class MaterialBuilder {
     private diffuseColor: vec3 = vec3.fromValues(1.0, 1.0, 1.0);
     private emissiveColor: vec3 = vec3.fromValues(0.0, 0.0, 0.0);
     private specularIntensity: number = 0.0;
-    private specularPower: number = 0.0;
+    private specularPower: number = 1.0;
 
     private static _default = new MaterialBuilder().build();
 
