@@ -185,6 +185,8 @@ export default class Renderer implements SceneGraphVisitor {
         this.gl.stencilOpSeparate(this.gl.BACK, this.gl.KEEP, this.gl.INCR_WRAP, this.gl.KEEP);
         this.gl.stencilOpSeparate(this.gl.FRONT, this.gl.KEEP, this.gl.DECR_WRAP, this.gl.KEEP);
 
+        this.gl.colorMask(false, false, false, false);
+
         this.renderRenderable(renderable, this.stencilPassShader);
 
         // depth reads
@@ -201,7 +203,10 @@ export default class Renderer implements SceneGraphVisitor {
         // stencil
         this.gl.stencilOpSeparate(this.gl.BACK, this.gl.KEEP, this.gl.KEEP, this.gl.KEEP);
         this.gl.stencilOpSeparate(this.gl.FRONT, this.gl.KEEP, this.gl.KEEP, this.gl.KEEP);
+
         this.gl.stencilFunc(this.gl.NOTEQUAL, 0, 1);
+
+        this.gl.colorMask(true, true, true, true);
 
         this.renderRenderable(renderable);
     }
