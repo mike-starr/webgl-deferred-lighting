@@ -31,7 +31,7 @@ export default class BasicScene extends Scene {
         const gBuffer = Renderer.createGBuffer(gl);
         const lightPassFrameBuffer = Renderer.createLightPassFrameBuffer(gl, gBuffer.accumulationTexture, gBuffer.depthTexture);
 
-        mat4.translate(this.cubeWorldTransform, this.cubeWorldTransform, [0.0, 0.0, -10.0]);
+        mat4.translate(this.cubeWorldTransform, this.cubeWorldTransform, [-0.5, 0.0, -10.0]);
 
         const cubeNode = new SceneGraphMeshNode({
             mesh: MeshLoader.loadCube(gl, 0.5),
@@ -66,7 +66,7 @@ export default class BasicScene extends Scene {
         });
 
         const pointLightVolumeTransform = mat4.create();
-        mat4.fromTranslation(pointLightVolumeTransform, [-0.5, 0.0, -9.0]);
+        mat4.fromTranslation(pointLightVolumeTransform, [-0.0, 0.0, -9.0]);
 
         const pointLightVolumeNode = new SceneGraphLightNode(<PointLightVolume> {
             color: vec3.fromValues(1.0, 0.0, 0.0),

@@ -5,6 +5,10 @@
 
 [150 Point Lights](https://mike-starr.github.io/webgl-experiments/examples/bigbang/index.html)
 
+[Scaled Point Lights](https://mike-starr.github.io/webgl-experiments/examples/scaled/index.html)
+
+[Almost Art?](https://mike-starr.github.io/webgl-experiments/examples/mess/index.html)
+
 ## Why?
 Several years ago, I read a [SIGGRAPH paper](https://developer.amd.com/wordpress/media/2013/01/Chapter05-Filion-StarCraftII.pdf) detailing Stacraft 2's deferred renderer. I thought it'd be neat to implement something similar, both as an exercise in learning WebGL and a general graphics programming refresh.
 
@@ -46,7 +50,7 @@ The fourth target - the depth/stencil buffer - uses the DEPTH24_STENCIL8 format;
 The fifth 'accumulation' target is created in the same format as the diffuse target. This is the target the lighting pass will use as final output; in the g-pass, it accumulates ambient and emissive lighting terms.
 
 ### Geometry Pass
-In the initial render pass - the geometry pass, all opaque geometry is rendered into the g-buffer targets. The shaders are extremely simple, as their only function is to transform positions/normals into world space, then populate the g-buffer targets with that and other material information.
+In the initial render pass - the geometry pass, all opaque geometry is rendered into the g-buffer targets. The shaders are simple - their only function is to transform positions/normals into world space, then populate the g-buffer targets with that and other material information.
 
 VS main:
 ```
@@ -80,12 +84,12 @@ Example g-buffer, from the [Christmas Tree](https://mike-starr.github.io/webgl-e
 ### Lighting
 The lighting pass renders a bounding mesh to the accumulation target for each light in the scene (spheres for point lights, boxes for directional lights), reading from the g-buffer textures to compute lighting on each fragment. Overlapping lights blend additively.
 
-To avoid performing lighting calculation on pixels outside a light's bounding volume - which will occur when an object is either fully in front of or behind the light volume, the light is first rendered with a no-op fragment shader and the stencil operation set up as follows:
+To avoid performing lighting calculation on pixels outside a light's bounding volume - which will occur when an object is either fully in front of or behind the light volume, the light is first rendered with color writes disabled and the stencil operation set up as follows:
 
 * For back-facing triangles that fail the depth test, increment the value in the stencil buffer.
 * For front-facing triangles that fail the depth test, decrement the value in the stencil buffer.
 
-The net effect of these operations results in a non-zero value written to the stencil buffer when the depth value is between the front and back face of the light volume (i.e., the light volume may affect this pixel in world space.).
+The net result of these operations is a non-zero value written to the stencil buffer when the depth value is between the front and back face of the light volume (i.e., the light volume may affect this pixel in world space.).
 
 After stenciling, the light is rendered again with the stencil function enabled and set up to fail if the stencil buffer value is zero. To avoid problems when the camera is inside the light volume, front faces are culled instead of back faces and the depth test is disabled - it was essentially done in the stencil test anyway.
 
@@ -102,12 +106,12 @@ When creating an attenuation model for the point light volumes, I noticed that u
 
 To avoid light volumes that were so large they'd nearly cover the entire screen - and therefore defeat the purpose of deferring the light pass - I switched to a method that takes the light radius as input and computes a smooth attenuation to zero at the extent of the volume (described [here](http://framebunker.com/blog/lighting-2-attenuation/)).
 
-#### Non-Uniformly Scaled Point Lights
+#### Arbitrarily Scaled Point Lights
 Conventionally, for point lights, the world-space light radius is passed into the light volume fragment shader and used to calculate attenuation. In this model, the lights are represented as a sphere with the intensity attenuating to zero at the radius. Because they're represented as geometry, they can be scaled, rotated and translated just as any other component of the scene graph.
 
-But because they can be scaled - and non-uniformly - the conventional model of passing the light radius to the shader is more complicated. I found it non trivial to compute attenuation in world space using a non-uniformly scaled sphere.
+But because they can be scaled - and non-uniformly - the conventional model of passing the light radius to the shader doesn't work directly. I found it non-trivial to compute attenuation in world space using a non-uniformly scaled sphere.
 
-To work around this complication, I transform the position and normal from the g-buffer into the light volume's reference frame using its inverse world matrix, calculated on CPU. Then I do the lighting calculations as normal with an attenuation range of 1.0. There's some performance overhead (two additional mat4 by vec4 multiplications), but it allows point lights to be scaled into non-spherical shapes.
+To work around this complication, I transform the position and normal from the g-buffer into the light volume's reference frame using its inverse world matrix, calculated on CPU. Then I do the lighting calculations as normal with an attenuation range of 1.0. There's some performance overhead (two additional mat4 by vec4 multiplications), but it allows point lights to be scaled into non-spherical shapes. The effect is illustrated in the [Scaled Point Lights](https://mike-starr.github.io/webgl-experiments/examples/scaled/index.html) demo; it's an interesting effect, but I'm unsure if it has any practical applications.
 
 ### Composite
 The final pass renders the accumulation target as a full-screen quad (orthographically), then renders any 2D elements on top of that - in the examples, the g-buffer targets are rendered on the left side of the screen as textured quads.

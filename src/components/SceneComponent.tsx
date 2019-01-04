@@ -4,6 +4,7 @@ import Scene from "../content/Scene";
 import BasicScene from "../content/BasicScene";
 import HolidayScene from "../content/HolidayScene";
 import BigBangScene from "../content/BigBangScene";
+import NonUniformScene from "../content/NonUniformScene";
 
 export default class SceneComponent extends React.Component<{}, {}> {
     private readonly canvasElementId = "webgl-canvas";
@@ -11,8 +12,9 @@ export default class SceneComponent extends React.Component<{}, {}> {
     private frameId: number = 0;
     private renderer: Renderer | null = null;
     //private scene: Scene = new HolidayScene();
-    //private scene: Scene = new BasicScene();
-    private scene: Scene = new BigBangScene();
+//    private scene: Scene = new BasicScene();
+//    private scene: Scene = new BigBangScene();
+    private scene: Scene = new NonUniformScene();
     private lastFrameTime: DOMHighResTimeStamp = 0;
 
     constructor(props: any) {
