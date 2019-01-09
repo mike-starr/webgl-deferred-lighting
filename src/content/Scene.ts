@@ -10,7 +10,6 @@ import GBuffer from "../renderer/GBuffer";
 import SceneGraphNormalPassNode from "../scenegraph/SceneGraphNormalPassNode";
 import MaterialBuilder from "../material/MaterialBuilder";
 
-
 export default abstract class Scene {
 
     protected animations: Animation[] = [];
@@ -73,7 +72,7 @@ export default abstract class Scene {
         return new SceneGraphNormalPassNode([cameraNode]);
     }
 
-    protected createTestTexture(gl: WebGL2RenderingContext): WebGLTexture {
+    /*protected createTestTexture(gl: WebGL2RenderingContext): WebGLTexture {
         const texture = gl.createTexture();
         gl.bindTexture(gl.TEXTURE_2D, texture);
 
@@ -94,5 +93,5 @@ export default abstract class Scene {
             pixel);
 
         return texture;
-    }
+    }*/
 }

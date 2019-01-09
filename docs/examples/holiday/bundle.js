@@ -29914,8 +29914,9 @@ class SceneComponent extends React.Component {
         this.frameId = 0;
         this.renderer = null;
         this.scene = new HolidayScene_1.default();
-        //private scene: Scene = new BasicScene();
+        //    private scene: Scene = new BasicScene();
         //private scene: Scene = new BigBangScene();
+        //private scene: Scene = new NonUniformScene();
         this.lastFrameTime = 0;
     }
     componentDidMount() {
@@ -30038,7 +30039,7 @@ class HolidayScene extends Scene_1.default {
         const rootTransform = gl_matrix_1.mat4.create();
         const rootTransformNode = new SceneGraphTransformNode_1.default(rootTransform, [room, tree, directionalLightVolumeNode]);
         const mainCamera = new Camera_1.default();
-        mainCamera.setLookAt(gl_matrix_1.vec3.fromValues(-1.0, 1.5, 3.0), gl_matrix_1.vec3.fromValues(3.5, 0.8, -4.0), gl_matrix_1.vec3.fromValues(0.0, 1.0, 0.0));
+        mainCamera.setLookAt(gl_matrix_1.vec3.fromValues(-0.6, 1.5, 2.2), gl_matrix_1.vec3.fromValues(3.5, 0.8, -4.0), gl_matrix_1.vec3.fromValues(0.0, 1.0, 0.0));
         const cameraNodeMain = new SceneGraphCameraNode_1.default(mainCamera, [rootTransformNode]);
         const gBufferPass = new SceneGraphGPassNode_1.default(this.gBuffer, [cameraNodeMain]);
         const lightPass = new SceneGraphLightPassNode_1.default(lightPassFrameBuffer, [cameraNodeMain]);
@@ -30383,6 +30384,28 @@ const MaterialBuilder_1 = __webpack_require__(/*! ../material/MaterialBuilder */
 class Scene {
     constructor() {
         this.animations = [];
+        /*protected createTestTexture(gl: WebGL2RenderingContext): WebGLTexture {
+            const texture = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, texture);
+    
+            if (!texture) {
+                throw new Error("Unable to create texture.");
+            }
+    
+            const level = 0;
+            const internalFormat = gl.RGBA;
+            const width = 1;
+            const height = 1;
+            const border = 0;
+            const srcFormat = gl.RGBA;
+            const srcType = gl.UNSIGNED_BYTE;
+            const pixel = new Uint8Array([0, 0, 255, 255]);
+            gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
+                width, height, border, srcFormat, srcType,
+                pixel);
+    
+            return texture;
+        }*/
     }
     update(elapsedMs) {
         for (const animation of this.animations) {
@@ -30431,23 +30454,6 @@ class Scene {
         camera2d.setProjectionOrthographic(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0);
         const cameraNode = new SceneGraphCameraNode_1.default(camera2d, [quadNodeFullScreen, quadNodeTop, quadNodeMidUpper, quadNodeMidBottom, quadNodeBottom]);
         return new SceneGraphNormalPassNode_1.default([cameraNode]);
-    }
-    createTestTexture(gl) {
-        const texture = gl.createTexture();
-        gl.bindTexture(gl.TEXTURE_2D, texture);
-        if (!texture) {
-            throw new Error("Unable to create texture.");
-        }
-        const level = 0;
-        const internalFormat = gl.RGBA;
-        const width = 1;
-        const height = 1;
-        const border = 0;
-        const srcFormat = gl.RGBA;
-        const srcType = gl.UNSIGNED_BYTE;
-        const pixel = new Uint8Array([0, 0, 255, 255]);
-        gl.texImage2D(gl.TEXTURE_2D, level, internalFormat, width, height, border, srcFormat, srcType, pixel);
-        return texture;
     }
 }
 exports.default = Scene;
@@ -31684,6 +31690,7 @@ class Shaders {
 
                 // Total
                 fragColor = diffuse * vec4(diffuseLightColor, 1.0) + vec4(specularColor, 1.0);// + vec4(1.0, 0.08, 0.0, 1.0);
+                //fragColor = vec4(1.0, 0.08, 0.0, 1.0);
             }`;
         const attributes = [ShaderDescription_1.AttributeName.VertexPosition];
         const uniforms = [

@@ -82,7 +82,7 @@ export default class HolidayScene extends Scene {
         const rootTransformNode = new SceneGraphTransformNode(rootTransform, [room, tree, directionalLightVolumeNode]);
 
         const mainCamera = new Camera();
-        mainCamera.setLookAt(vec3.fromValues(-1.0, 1.5, 3.0), vec3.fromValues(3.5, 0.8, -4.0), vec3.fromValues(0.0, 1.0, 0.0));
+        mainCamera.setLookAt(vec3.fromValues(-0.6, 1.5, 2.2), vec3.fromValues(3.5, 0.8, -4.0), vec3.fromValues(0.0, 1.0, 0.0));
         const cameraNodeMain = new SceneGraphCameraNode(mainCamera, [rootTransformNode]);
 
         const gBufferPass = new SceneGraphGPassNode(this.gBuffer, [cameraNodeMain]);

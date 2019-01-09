@@ -48,7 +48,6 @@ export default class BigBangScene extends Scene {
         this.lightPassTextures = [this.gBuffer.positionTexture, this.gBuffer.normalTexture, this.gBuffer.diffuseTexture];
         const lightPassFrameBuffer = Renderer.createLightPassFrameBuffer(gl, this.gBuffer.accumulationTexture, this.gBuffer.depthTexture);
 
-        //const background = this.makeRoom(gl);
         const background = this.makeBackground(gl);
 
         const directionalLightVolumeTransform = mat4.create();
@@ -83,22 +82,6 @@ export default class BigBangScene extends Scene {
         const overlayPass = this.createOverlayNode(gl, gBufferPass.gBuffer);
 
         this.rootNode = new SceneGraphNode([gBufferPass, lightPass, overlayPass]);
-    }
-
-    private makeRoom(gl: WebGL2RenderingContext): SceneGraphNode {
-        const cubeMesh = MeshLoader.loadCube(gl, 0.5);
-
-        const backWallTransform = mat4.create();
-        mat4.fromRotationTranslationScale(backWallTransform, quat.create(), [0.0, 0.0, 0.0], [4.0, 3.0, 0.01]);
-
-        const wallMaterial = new MaterialBuilder()
-            .withDiffuseColor(vec3.fromValues(0.0, 0.0, 0.0))
-            .withSpecularIntensity(0.8)
-            .withSpecularPower(2).build();
-
-        const backWallNode = new SceneGraphMeshNode(this.makeCubeRenderable(backWallTransform, cubeMesh, wallMaterial));
-
-        return new SceneGraphNode([backWallNode]);
     }
 
     private makeBackground(gl: WebGL2RenderingContext) {
