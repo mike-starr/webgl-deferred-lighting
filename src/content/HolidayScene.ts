@@ -7,19 +7,17 @@ import Camera from "../camera/Camera";
 import SceneGraphTransformNode from "../scenegraph/SceneGraphTransformNode";
 import SceneGraphMeshNode from "../scenegraph/SceneGraphMeshNode";
 import Shaders from "../shaders/Shaders";
-import Renderer from "../renderer/Renderer";
-import SceneGraphGPassNode from "../scenegraph/SceneGraphGPassNode";
 import ShaderProgram from "../shaders/ShaderProgram";
-import GBuffer from "../renderer/GBuffer";
 import SceneGraphLightNode from "../scenegraph/SceneGraphLightNode";
 import DirectionalLightVolume from "../lighting/DirectionalLightVolume";
-import SceneGraphLightPassNode from "../scenegraph/SceneGraphLightPassNode";
 import Mesh from "../Mesh/Mesh";
 import RotationAnimation from "./RotationAnimation";
 import MaterialBuilder from "../material/MaterialBuilder";
 import Material from "../material/Material";
 import Renderable from "../renderer/Renderable";
 import LightIntensityAnimation from "./LightIntensityAnimation";
+import RenderQueue from "../renderer/RenderQueue";
+import TextureConstant from "../renderer/TextureConstant";
 
 export default class HolidayScene extends Scene {
 
@@ -28,7 +26,6 @@ export default class HolidayScene extends Scene {
     private gPassShader: ShaderProgram | null = null;
     private directionalLightShader: ShaderProgram | null = null;
     private pointLightShader: ShaderProgram | null = null;
-    private gBuffer: GBuffer | null = null;
     private lightPassTextures: WebGLTexture[] = [];
     private pointLightSphere: Mesh | null = null;
     private lightColors: vec3[] = [];
@@ -41,10 +38,12 @@ export default class HolidayScene extends Scene {
         this.gPassShader = Shaders.makeGBufferShader(gl);
         this.directionalLightShader = Shaders.makeDirectionalLightVolumeShader(gl);
         this.pointLightShader = Shaders.makePointLightVolumeShader(gl);
-        this.gBuffer = Renderer.createGBuffer(gl);
         this.pointLightSphere = MeshLoader.loadSphere(gl, 10, 10, 1.04);
-        this.lightPassTextures = [this.gBuffer.positionTexture, this.gBuffer.normalTexture, this.gBuffer.diffuseTexture];
-        const lightPassFrameBuffer = Renderer.createLightPassFrameBuffer(gl, this.gBuffer.accumulationTexture, this.gBuffer.depthTexture);
+        this.lightPassTextures = [
+            TextureConstant.GBufferPositionTarget,
+            TextureConstant.GBufferNormalTarget,
+            TextureConstant.GBufferDiffuseTarget
+        ];
 
         this.initLightColors();
 
@@ -53,13 +52,6 @@ export default class HolidayScene extends Scene {
         const treeTransform = mat4.create();
         mat4.translate(treeTransform, treeTransform, [2.8, 0.0, -1.7]);
         const tree = new SceneGraphTransformNode(treeTransform, [this.makeTree(gl)]);
-
-        const pointLight = this.makePointLight(gl, 0.8, vec3.fromValues(1.0, 1.0, 1.0), 0.6, false, false);
-        const orbit = this.makeOrbit(1.1, [pointLight]);
-        const orbitTransform = mat4.create();
-        mat4.translate(orbitTransform, orbitTransform, [2.8, 0.2, -1.9]);
-        this.animations.push(new RotationAnimation(orbitTransform, Math.PI / 12));
-        const orbitTransformNode = new SceneGraphTransformNode(orbitTransform, [orbit]);
 
         const directionalLightVolumeTransform = mat4.create();
         mat4.fromRotationTranslationScale(directionalLightVolumeTransform, quat.create(), [0.0, 0.0, 0.0], [100.0, 100.0, 7.0]);
@@ -71,12 +63,9 @@ export default class HolidayScene extends Scene {
             mesh: MeshLoader.loadCube(gl, 0.5),
             localTransform: directionalLightVolumeTransform,
             textures: this.lightPassTextures,
-            shaderProgram: this.directionalLightShader
+            shaderProgram: this.directionalLightShader,
+            renderQueue: RenderQueue.Lighting
         });
-
-        const pointLightVolumeTransform = mat4.create();
-        mat4.fromTranslation(pointLightVolumeTransform, [0.0, 1.0, 1.0]);
-        const pointLightVolumeNode = new SceneGraphTransformNode(pointLightVolumeTransform, [this.makePointLight(gl, 1.8, vec3.fromValues(1.0, 1.0, 1.0), 1.0)]);
 
         const rootTransform = mat4.create();
         const rootTransformNode = new SceneGraphTransformNode(rootTransform, [room, tree, directionalLightVolumeNode]);
@@ -85,11 +74,9 @@ export default class HolidayScene extends Scene {
         mainCamera.setLookAt(vec3.fromValues(-0.6, 1.5, 2.2), vec3.fromValues(3.5, 0.8, -4.0), vec3.fromValues(0.0, 1.0, 0.0));
         const cameraNodeMain = new SceneGraphCameraNode(mainCamera, [rootTransformNode]);
 
-        const gBufferPass = new SceneGraphGPassNode(this.gBuffer, [cameraNodeMain]);
-        const lightPass = new SceneGraphLightPassNode(lightPassFrameBuffer, [cameraNodeMain]);
-        const overlayPass = this.createOverlayNode(gl, gBufferPass.gBuffer);
+        const overlayNode = this.createOverlayNode(gl);
 
-        this.rootNode = new SceneGraphNode([gBufferPass, lightPass, overlayPass]);
+        this.rootNode = new SceneGraphNode([cameraNodeMain, overlayNode]);
     }
 
     update(elapsedMs: number): void {
@@ -199,7 +186,6 @@ export default class HolidayScene extends Scene {
 
         for (let x = -treeWidth / 2.0; x < treeWidth / 2.0; x += lightSpacing) {
             for (let y = -treeHeight / 2.0; y < treeHeight / 2.0; y += lightSpacing) {
-
                 const pctToTop = ((y + treeHeight / 2.0) / treeHeight);
                 const maxWidth = (treeWidth / 2.0) * (1 - pctToTop);
                 const minWidth = maxWidth * deadRadiusPct;
@@ -319,7 +305,8 @@ export default class HolidayScene extends Scene {
             localTransform: mat4.create(),
             textures: this.lightPassTextures,
             shaderProgram: this.pointLightShader as ShaderProgram,
-            material: MaterialBuilder.default
+            material: MaterialBuilder.default,
+            renderQueue: RenderQueue.Lighting
         };
 
         if (animateIntensity) {
@@ -340,7 +327,8 @@ export default class HolidayScene extends Scene {
             localTransform: emitterTransform,
             textures: [],
             material: sphereMaterial,
-            shaderProgram: this.gPassShader as ShaderProgram
+            shaderProgram: this.gPassShader as ShaderProgram,
+            renderQueue: RenderQueue.Opaque
         }
 
         const children: SceneGraphNode[] = [pointLightVolumeNode];
@@ -402,7 +390,8 @@ export default class HolidayScene extends Scene {
             localTransform: transform,
             textures: [],
             material: material,
-            shaderProgram: this.gPassShader as ShaderProgram
+            shaderProgram: this.gPassShader as ShaderProgram,
+            renderQueue: RenderQueue.Opaque
         };
     }
 

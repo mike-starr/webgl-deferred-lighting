@@ -6,9 +6,9 @@ import Animation from "./Animation";
 import SceneGraphMeshNode from "../scenegraph/SceneGraphMeshNode";
 import MeshLoader from "../mesh/MeshLoader";
 import Shaders from "../shaders/Shaders";
-import GBuffer from "../renderer/GBuffer";
-import SceneGraphNormalPassNode from "../scenegraph/SceneGraphNormalPassNode";
 import MaterialBuilder from "../material/MaterialBuilder";
+import RenderQueue from "../renderer/RenderQueue";
+import TextureConstant from "../renderer/TextureConstant";
 
 export default abstract class Scene {
 
@@ -24,52 +24,59 @@ export default abstract class Scene {
         }
     }
 
-    protected createOverlayNode(gl: WebGL2RenderingContext, gBufferTextures: GBuffer): SceneGraphNode {
+    protected createOverlayNode(gl: WebGL2RenderingContext): SceneGraphNode {
         const texturedShader = Shaders.makeTextureShader(gl);
         const texturedDepthShader = Shaders.makeTextureShader(gl, true);
 
         const quadNodeTop = new SceneGraphMeshNode({
             mesh: MeshLoader.loadTexturedQuad(gl, -1.0, -0.5, 0.5, 1.0),
             localTransform: mat4.create(),
-            textures: [gBufferTextures.diffuseTexture],
+            textures: [TextureConstant.GBufferDiffuseTarget],
             material: MaterialBuilder.default,
-            shaderProgram: texturedShader
+            shaderProgram: texturedShader,
+            renderQueue: RenderQueue.Overlay
         });
+
         const quadNodeMidUpper = new SceneGraphMeshNode({
             mesh: MeshLoader.loadTexturedQuad(gl, -1.0, -0.5, 0.0, 0.5),
             localTransform: mat4.create(),
-            textures: [gBufferTextures.positionTexture],
+            textures: [TextureConstant.GBufferPositionTarget],
             material: MaterialBuilder.default,
-            shaderProgram: texturedShader
+            shaderProgram: texturedShader,
+            renderQueue: RenderQueue.Overlay
         });
+
         const quadNodeMidBottom = new SceneGraphMeshNode({
             mesh: MeshLoader.loadTexturedQuad(gl, -1.0, -0.5, -0.5, 0.0),
             localTransform: mat4.create(),
-            textures: [gBufferTextures.normalTexture],
+            textures: [TextureConstant.GBufferNormalTarget],
             material: MaterialBuilder.default,
-            shaderProgram: texturedShader
+            shaderProgram: texturedShader,
+            renderQueue: RenderQueue.Overlay
         });
+
         const quadNodeBottom = new SceneGraphMeshNode({
             mesh: MeshLoader.loadTexturedQuad(gl, -1.0, -0.5, -1.0, -0.5),
             localTransform: mat4.create(),
-            textures: [gBufferTextures.depthTexture],
+            textures: [TextureConstant.GBufferDepthTarget],
             material: MaterialBuilder.default,
-            shaderProgram: texturedDepthShader
+            shaderProgram: texturedDepthShader,
+            renderQueue: RenderQueue.Overlay
         });
 
         const quadNodeFullScreen = new SceneGraphMeshNode({
             mesh: MeshLoader.loadTexturedQuad(gl, -1.0, 1.0, -1.0, 1.0),
             localTransform: mat4.create(),
-            textures: [gBufferTextures.accumulationTexture],
+            textures: [TextureConstant.GBufferAccumulationTarget],
             material: MaterialBuilder.default,
-            shaderProgram: texturedShader
+            shaderProgram: texturedShader,
+            renderQueue: RenderQueue.Overlay
         });
 
         const camera2d = new Camera();
         camera2d.setProjectionOrthographic(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0);
 
-        const cameraNode = new SceneGraphCameraNode(camera2d, [quadNodeFullScreen, quadNodeTop, quadNodeMidUpper, quadNodeMidBottom, quadNodeBottom]);
-        return new SceneGraphNormalPassNode([cameraNode]);
+        return new SceneGraphCameraNode(camera2d, [quadNodeFullScreen, quadNodeTop, quadNodeMidUpper, quadNodeMidBottom, quadNodeBottom]);
     }
 
     /*protected createTestTexture(gl: WebGL2RenderingContext): WebGLTexture {

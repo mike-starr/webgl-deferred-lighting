@@ -7,26 +7,22 @@ import MeshLoader from "../mesh/MeshLoader";
 import SceneGraphMeshNode from "../scenegraph/SceneGraphMeshNode";
 import SceneGraphLightNode from "../scenegraph/SceneGraphLightNode";
 import Shaders from "../shaders/Shaders";
-import SceneGraphLightPassNode from "../scenegraph/SceneGraphLightPassNode";
-import SceneGraphGPassNode from "../scenegraph/SceneGraphGPassNode";
 import DirectionalLightVolume from "../lighting/DirectionalLightVolume";
-import Renderer from "../renderer/Renderer";
 import MaterialBuilder from "../material/MaterialBuilder";
-import GBuffer from "../renderer/GBuffer";
 import ShaderProgram from "../shaders/ShaderProgram";
 import Mesh from "../Mesh/Mesh";
 import SceneGraphTransformNode from "../scenegraph/SceneGraphTransformNode";
-import Material from "../material/Material";
 import Renderable from "../renderer/Renderable";
 import LightIntensityAnimation from "./LightIntensityAnimation";
 import BoundedTranslationAnimation from "./BoundedTranslationAnimation";
+import RenderQueue from "../renderer/RenderQueue";
+import TextureConstant from "../renderer/TextureConstant";
 
 export default class BigBangScene extends Scene {
 
     private gPassShader: ShaderProgram | null = null;
     private directionalLightShader: ShaderProgram | null = null;
     private pointLightShader: ShaderProgram | null = null;
-    private gBuffer: GBuffer | null = null;
     private lightPassTextures: WebGLTexture[] = [];
     private pointLightSphere: Mesh | null = null;
     private lightColors: vec3[] = [];
@@ -43,10 +39,12 @@ export default class BigBangScene extends Scene {
         this.gPassShader = Shaders.makeGBufferShader(gl);
         this.directionalLightShader = Shaders.makeDirectionalLightVolumeShader(gl);
         this.pointLightShader = Shaders.makePointLightVolumeShader(gl);
-        this.gBuffer = Renderer.createGBuffer(gl);
         this.pointLightSphere = MeshLoader.loadSphere(gl, 10, 10, 1.04);
-        this.lightPassTextures = [this.gBuffer.positionTexture, this.gBuffer.normalTexture, this.gBuffer.diffuseTexture];
-        const lightPassFrameBuffer = Renderer.createLightPassFrameBuffer(gl, this.gBuffer.accumulationTexture, this.gBuffer.depthTexture);
+        this.lightPassTextures = [
+            TextureConstant.GBufferPositionTarget,
+            TextureConstant.GBufferNormalTarget,
+            TextureConstant.GBufferDiffuseTarget
+        ];
 
         const background = this.makeBackground(gl);
 
@@ -77,11 +75,9 @@ export default class BigBangScene extends Scene {
         mainCamera.setLookAt(vec3.fromValues(-0.7, 0.0, 3.75), vec3.fromValues(-0.7, 0.0, 0.0), vec3.fromValues(0.0, 1.0, 0.0));
         const cameraNodeMain = new SceneGraphCameraNode(mainCamera, [rootTransformNode]);
 
-        const gBufferPass = new SceneGraphGPassNode(this.gBuffer, [cameraNodeMain]);
-        const lightPass = new SceneGraphLightPassNode(lightPassFrameBuffer, [cameraNodeMain]);
-        const overlayPass = this.createOverlayNode(gl, gBufferPass.gBuffer);
+        const overlayNode = this.createOverlayNode(gl);
 
-        this.rootNode = new SceneGraphNode([gBufferPass, lightPass, overlayPass]);
+        this.rootNode = new SceneGraphNode([cameraNodeMain, overlayNode]);
     }
 
     private makeBackground(gl: WebGL2RenderingContext) {
@@ -109,7 +105,8 @@ export default class BigBangScene extends Scene {
             material: cubeMaterial,
             textures: [],
             localTransform: cubeLocalTransform,
-            shaderProgram: this.gPassShader as ShaderProgram
+            shaderProgram: this.gPassShader as ShaderProgram,
+            renderQueue: RenderQueue.Opaque
         }
 
         const cubeNode = new SceneGraphMeshNode(cubeRenderable);
@@ -167,7 +164,8 @@ export default class BigBangScene extends Scene {
             localTransform: mat4.create(),
             textures: this.lightPassTextures,
             shaderProgram: this.pointLightShader as ShaderProgram,
-            material: MaterialBuilder.default
+            material: MaterialBuilder.default,
+            renderQueue: RenderQueue.Lighting
         };
 
         if (animateIntensity) {
@@ -188,7 +186,8 @@ export default class BigBangScene extends Scene {
             localTransform: emitterTransform,
             textures: [],
             material: sphereMaterial,
-            shaderProgram: this.gPassShader as ShaderProgram
+            shaderProgram: this.gPassShader as ShaderProgram,
+            renderQueue: RenderQueue.Opaque
         }
 
         const children: SceneGraphNode[] = [pointLightVolumeNode];
@@ -198,16 +197,6 @@ export default class BigBangScene extends Scene {
         }
 
         return new SceneGraphTransformNode(pointLightTransform, children);
-    }
-
-    private makeCubeRenderable(transform: mat4, mesh: Mesh, material: Material = MaterialBuilder.default): Renderable {
-        return {
-            mesh: mesh,
-            localTransform: transform,
-            textures: [],
-            material: material,
-            shaderProgram: this.gPassShader as ShaderProgram
-        };
     }
 
     private initLightColors() {

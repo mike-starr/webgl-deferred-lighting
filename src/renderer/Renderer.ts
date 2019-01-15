@@ -2,8 +2,6 @@ import { mat4, vec3 } from "gl-matrix";
 import SceneGraphVisitor from "../scenegraph/SceneGraphVisitor";
 import SceneGraphNode from "../scenegraph/SceneGraphNode";
 import { UniformName } from "../shaders/ShaderDescription";
-import SceneGraphGPassNode from "../scenegraph/SceneGraphGPassNode";
-import SceneGraphLightPassNode from "../scenegraph/SceneGraphLightPassNode";
 import Renderable from "./Renderable";
 import GBuffer from "./GBuffer";
 import DirectionalLightVolume from "../lighting/DirectionalLightVolume";
@@ -11,20 +9,17 @@ import LightVolume from "../lighting/LightVolume";
 import ShaderProgram from "../shaders/ShaderProgram";
 import Shaders from "../shaders/Shaders";
 import Camera from "../camera/Camera";
-
-enum PassType {
-    None,
-    GPass,
-    LightPass,
-    NormalPass
-};
+import TextureConstant from "./TextureConstant";
+import RenderQueue from "./RenderQueue";
 
 export default class Renderer implements SceneGraphVisitor {
     private worldMatrixStack: mat4[] = [];
     private cameraStack: Camera[] = [];
     private currentWorldMatrix: mat4 = mat4.create();
     private stencilPassShader: ShaderProgram;
-    private passType: PassType = PassType.None;
+    private activeRenderQueue: RenderQueue = RenderQueue.Opaque;
+    private gBuffer: GBuffer;
+    private lightPassFramebuffer: WebGLFramebuffer;
 
     constructor(private readonly gl: WebGL2RenderingContext) {
         if (!this.gl.getExtension("EXT_color_buffer_float")) {
@@ -32,66 +27,24 @@ export default class Renderer implements SceneGraphVisitor {
         }
 
         this.stencilPassShader = Shaders.makeStencilPassShader(gl);
-    }
-
-    static createGBuffer(gl: WebGL2RenderingContext): GBuffer {
-        const frameBuffer = gl.createFramebuffer();
-        if (!frameBuffer) {
-            throw new Error("Failed to create framebuffer.");
-        }
-
-        gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
-
-        const positionTarget = this.createRenderTargetTexture(gl, gl.RGBA32F);
-        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, positionTarget, 0);
-
-        const normalTarget = this.createRenderTargetTexture(gl, gl.RGBA32F);
-        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT1, gl.TEXTURE_2D, normalTarget, 0);
-
-        const diffuseTarget = this.createRenderTargetTexture(gl, gl.RGBA8);
-        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT2, gl.TEXTURE_2D, diffuseTarget, 0);
-
-        const depthTarget = this.createRenderTargetTexture(gl, gl.DEPTH24_STENCIL8);
-        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.TEXTURE_2D, depthTarget, 0);
-
-        const accumulationTarget = this.createRenderTargetTexture(gl, gl.RGBA8);
-        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT3, gl.TEXTURE_2D, accumulationTarget, 0);
-
-        gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1, gl.COLOR_ATTACHMENT2, gl.COLOR_ATTACHMENT3]);
-
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
-        return {
-            frameBuffer: frameBuffer,
-            diffuseTexture: diffuseTarget,
-            positionTexture: positionTarget,
-            normalTexture: normalTarget,
-            depthTexture: depthTarget,
-            accumulationTexture: accumulationTarget
-        };
-    }
-
-    static createLightPassFrameBuffer(gl: WebGL2RenderingContext,
-        accumulationTexture: WebGLTexture,
-        depthTexture: WebGLTexture): WebGLFramebuffer {
-        const frameBuffer = gl.createFramebuffer();
-        if (!frameBuffer) {
-            throw new Error("Failed to create framebuffer.");
-        }
-
-        gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
-        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, accumulationTexture, 0);
-        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.TEXTURE_2D, depthTexture, 0);
-        gl.drawBuffers([gl.COLOR_ATTACHMENT0]);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
-        return frameBuffer;
+        this.gBuffer = this.createGBuffer();
+        this.lightPassFramebuffer = this.createLightPassFrameBuffer(this.gBuffer);
     }
 
     render(sceneGraphRoot: SceneGraphNode): void {
         this.gl.depthFunc(this.gl.LEQUAL);
 
+        this.beginGPass();
         sceneGraphRoot.accept(this);
+        this.endGPass();
+
+        this.beginLightPass();
+        sceneGraphRoot.accept(this);
+        this.endLightPass();
+
+        this.beginOverlayPass();
+        sceneGraphRoot.accept(this);
+        this.endOverlayPass();
     }
 
     pushCamera(camera: Camera): void {
@@ -110,62 +63,8 @@ export default class Renderer implements SceneGraphVisitor {
         this.worldMatrixStack.pop();
     }
 
-    beginGPass(node: SceneGraphGPassNode): void {
-        this.startPass(PassType.GPass);
-
-        this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, node.gBuffer.frameBuffer);
-
-        // depth reads
-        this.gl.enable(this.gl.DEPTH_TEST);
-
-        // depth writes
-        this.gl.depthMask(true);
-
-        // blend
-        this.gl.disable(this.gl.BLEND);
-
-        // culing
-        this.gl.enable(this.gl.CULL_FACE);
-        this.gl.cullFace(this.gl.BACK);
-
-        this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
-        this.gl.clearDepth(1.0);
-        this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT | this.gl.STENCIL_BUFFER_BIT);
-    }
-
-    endGPass(): void {
-        this.passType = PassType.None;
-    }
-
-    beginLightPass(node: SceneGraphLightPassNode): void {
-        this.startPass(PassType.LightPass);
-
-        this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, node.frameBuffer);
-        this.gl.enable(this.gl.STENCIL_TEST);
-        this.gl.depthMask(false);
-    }
-
-    endLightPass(): void {
-        this.gl.disable(this.gl.BLEND);
-        this.gl.cullFace(this.gl.BACK);
-        this.gl.depthMask(true);
-        this.gl.disable(this.gl.STENCIL_TEST);
-
-        this.passType = PassType.None;
-    }
-
-    beginNormalPass(): void {
-        this.startPass(PassType.NormalPass);
-
-        this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
-    }
-
-    endNormalPass(): void {
-        this.passType = PassType.None;
-    }
-
     renderLight(renderable: Renderable): void {
-        if (this.passType !== PassType.LightPass) {
+        if (this.activeRenderQueue !== renderable.renderQueue) {
             return;
         }
 
@@ -212,8 +111,7 @@ export default class Renderer implements SceneGraphVisitor {
     }
 
     renderMesh(renderable: Renderable): void {
-        if (!(this.passType === PassType.GPass ||
-            this.passType === PassType.NormalPass)) {
+        if (this.activeRenderQueue !== renderable.renderQueue) {
             return;
         }
 
@@ -272,7 +170,7 @@ export default class Renderer implements SceneGraphVisitor {
                         inverseWorldMatrix);
                     break;
 
-                    case UniformName.CameraPositionLocalSpace:
+                case UniformName.CameraPositionLocalSpace:
                     {
                         const cameraPosLocalSpace = vec3.create();
                         vec3.transformMat4(cameraPosLocalSpace, camera.eyePoint, inverseWorldMatrix);
@@ -282,19 +180,19 @@ export default class Renderer implements SceneGraphVisitor {
 
                 case UniformName.TextureSampler0:
                     this.gl.activeTexture(this.gl.TEXTURE0);
-                    this.gl.bindTexture(this.gl.TEXTURE_2D, renderable.textures[0]);
+                    this.gl.bindTexture(this.gl.TEXTURE_2D, this.resolveTexture(renderable.textures[0]));
                     this.gl.uniform1i(uniform.location, 0);
                     break;
 
                 case UniformName.TextureSampler1:
                     this.gl.activeTexture(this.gl.TEXTURE1);
-                    this.gl.bindTexture(this.gl.TEXTURE_2D, renderable.textures[1]);
+                    this.gl.bindTexture(this.gl.TEXTURE_2D, this.resolveTexture(renderable.textures[1]));
                     this.gl.uniform1i(uniform.location, 1);
                     break;
 
                 case UniformName.TextureSampler2:
                     this.gl.activeTexture(this.gl.TEXTURE2);
-                    this.gl.bindTexture(this.gl.TEXTURE_2D, renderable.textures[2]);
+                    this.gl.bindTexture(this.gl.TEXTURE_2D, this.resolveTexture(renderable.textures[2]));
                     this.gl.uniform1i(uniform.location, 2);
                     break;
 
@@ -341,6 +239,58 @@ export default class Renderer implements SceneGraphVisitor {
             mesh.indexBufferDescription.offset);
     }
 
+    private beginGPass(): void {
+        this.activeRenderQueue = RenderQueue.Opaque;
+
+        this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, this.gBuffer.frameBuffer);
+
+        // depth reads
+        this.gl.enable(this.gl.DEPTH_TEST);
+
+        // depth writes
+        this.gl.depthMask(true);
+
+        // blend
+        this.gl.disable(this.gl.BLEND);
+
+        // culing
+        this.gl.enable(this.gl.CULL_FACE);
+        this.gl.cullFace(this.gl.BACK);
+
+        this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
+        this.gl.clearDepth(1.0);
+        this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT | this.gl.STENCIL_BUFFER_BIT);
+    }
+
+    private endGPass(): void {
+
+    }
+
+    private beginLightPass(): void {
+        this.activeRenderQueue = RenderQueue.Lighting;
+
+        this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, this.lightPassFramebuffer);
+        this.gl.enable(this.gl.STENCIL_TEST);
+        this.gl.depthMask(false);
+    }
+
+    private endLightPass(): void {
+        this.gl.disable(this.gl.BLEND);
+        this.gl.cullFace(this.gl.BACK);
+        this.gl.depthMask(true);
+        this.gl.disable(this.gl.STENCIL_TEST);
+    }
+
+    private beginOverlayPass(): void {
+        this.activeRenderQueue = RenderQueue.Overlay;
+
+        this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
+    }
+
+    private endOverlayPass(): void {
+
+    }
+
     private updateCurrentWorldMatrix() {
         mat4.identity(this.currentWorldMatrix);
 
@@ -349,15 +299,68 @@ export default class Renderer implements SceneGraphVisitor {
         }
     }
 
-    private startPass(type: PassType) {
-        if (this.passType !== PassType.None) {
-            throw new Error("Can't start a render pass while in another pass.")
+    private resolveTexture(texture:WebGLTexture|TextureConstant): WebGLTexture {
+        if (texture instanceof WebGLTexture) {
+            return texture;
         }
 
-        this.passType = type;
+        switch (texture) {
+            case TextureConstant.GBufferAccumulationTarget:
+                return this.gBuffer.accumulationTexture;
+            case TextureConstant.GBufferDepthTarget:
+                return this.gBuffer.depthTexture;
+            case TextureConstant.GBufferDiffuseTarget:
+                return this.gBuffer.diffuseTexture;
+            case TextureConstant.GBufferNormalTarget:
+                return this.gBuffer.normalTexture;
+            case TextureConstant.GBufferPositionTarget:
+                return this.gBuffer.positionTexture;
+            default:
+                throw new Error("Unkown texture constant.");
+        }
     }
 
-    private static createRenderTargetTexture(gl: WebGL2RenderingContext, format: GLenum): WebGLTexture {
+    private createGBuffer(): GBuffer {
+        const gl = this.gl;
+
+        const frameBuffer = gl.createFramebuffer();
+        if (!frameBuffer) {
+            throw new Error("Failed to create framebuffer.");
+        }
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
+
+        const positionTarget = this.createRenderTargetTexture(gl.RGBA32F);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, positionTarget, 0);
+
+        const normalTarget = this.createRenderTargetTexture(gl.RGBA32F);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT1, gl.TEXTURE_2D, normalTarget, 0);
+
+        const diffuseTarget = this.createRenderTargetTexture(gl.RGBA8);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT2, gl.TEXTURE_2D, diffuseTarget, 0);
+
+        const depthTarget = this.createRenderTargetTexture(gl.DEPTH24_STENCIL8);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.TEXTURE_2D, depthTarget, 0);
+
+        const accumulationTarget = this.createRenderTargetTexture(gl.RGBA8);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT3, gl.TEXTURE_2D, accumulationTarget, 0);
+
+        gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1, gl.COLOR_ATTACHMENT2, gl.COLOR_ATTACHMENT3]);
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+        return {
+            frameBuffer: frameBuffer,
+            diffuseTexture: diffuseTarget,
+            positionTexture: positionTarget,
+            normalTexture: normalTarget,
+            depthTexture: depthTarget,
+            accumulationTexture: accumulationTarget
+        };
+    }
+
+    private createRenderTargetTexture(format: GLenum): WebGLTexture {
+        const gl = this.gl;
         const texture = gl.createTexture();
         if (!texture) {
             throw new Error("Failed to create texture.");
@@ -371,5 +374,21 @@ export default class Renderer implements SceneGraphVisitor {
         gl.texStorage2D(gl.TEXTURE_2D, 1, format, gl.drawingBufferWidth, gl.drawingBufferHeight);
 
         return texture;
+    }
+
+    private createLightPassFrameBuffer(gBuffer: GBuffer): WebGLFramebuffer {
+        const gl = this.gl;
+        const frameBuffer = gl.createFramebuffer();
+        if (!frameBuffer) {
+            throw new Error("Failed to create framebuffer.");
+        }
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, gBuffer.accumulationTexture, 0);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.TEXTURE_2D, gBuffer.depthTexture, 0);
+        gl.drawBuffers([gl.COLOR_ATTACHMENT0]);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+        return frameBuffer;
     }
 }
