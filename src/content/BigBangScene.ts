@@ -26,7 +26,6 @@ export default class BigBangScene extends Scene {
     private lightPassTextures: WebGLTexture[] = [];
     private pointLightSphere: Mesh | null = null;
     private lightColors: vec3[] = [];
-
     private rootNode: SceneGraphNode = new SceneGraphNode([]);
 
     get graphRoot(): SceneGraphNode {
@@ -64,7 +63,7 @@ export default class BigBangScene extends Scene {
         const pointLightTransform = mat4.create();
         mat4.fromTranslation(pointLightTransform, [0.0, 0.0, 0.0]);
 
-        const lights = this.generateLights(gl, 150);
+        const lights = this.generateLights(gl, 350);
 
         const pointLightTransformNode = new SceneGraphTransformNode(pointLightTransform, [lights]);
 

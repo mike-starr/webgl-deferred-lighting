@@ -21,6 +21,7 @@ import RenderQueue from "../renderer/RenderQueue";
 import TextureConstant from "../renderer/TextureConstant";
 
 export default class NonUniformScene extends Scene {
+
     private gPassShader: ShaderProgram | null = null;
     private directionalLightShader: ShaderProgram | null = null;
     private pointLightShader: ShaderProgram | null = null;

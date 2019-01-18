@@ -255,7 +255,7 @@ export default class Shaders {
                 vec3 specularColor = uLightPoint.color * uLightPoint.intensity * specularIntensity * pow(specularFactor, specularPower) * attenuation;
 
                 // Total
-                fragColor = diffuse * vec4(diffuseLightColor, 1.0) + vec4(specularColor, 1.0);// + vec4(1.0, 0.08, 0.0, 1.0);
+                fragColor = diffuse * vec4(diffuseLightColor, 1.0) + vec4(specularColor, 1.0);// + vec4(0.0, 0.00, 0.05, 1.0);
                 //fragColor = vec4(1.0, 0.08, 0.0, 1.0);
             }`;
 

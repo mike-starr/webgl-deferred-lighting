@@ -29,11 +29,14 @@ export default class Renderer implements SceneGraphVisitor {
         this.stencilPassShader = Shaders.makeStencilPassShader(gl);
         this.gBuffer = this.createGBuffer();
         this.lightPassFramebuffer = this.createLightPassFrameBuffer(this.gBuffer);
+
+        this.gl.depthFunc(this.gl.LEQUAL);
+        this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
+        this.gl.clearDepth(1.0);
+        this.gl.clearStencil(0);
     }
 
     render(sceneGraphRoot: SceneGraphNode): void {
-        this.gl.depthFunc(this.gl.LEQUAL);
-
         this.beginGPass();
         sceneGraphRoot.accept(this);
         this.endGPass();
@@ -68,45 +71,35 @@ export default class Renderer implements SceneGraphVisitor {
             return;
         }
 
-        // depth reads
+        // Disable culling and depth-test so the stencil op works.
         this.gl.enable(this.gl.DEPTH_TEST);
-
-        // blend
-        this.gl.disable(this.gl.BLEND);
-
-        // culling
         this.gl.disable(this.gl.CULL_FACE);
 
-        //stencil
-        this.gl.clearStencil(0);
+        // Enable stencil writes and set function to always suceed.
+        this.gl.stencilMask(1);
         this.gl.clear(this.gl.STENCIL_BUFFER_BIT);
         this.gl.stencilFunc(this.gl.ALWAYS, 0, 1);
-        this.gl.stencilOpSeparate(this.gl.BACK, this.gl.KEEP, this.gl.INCR_WRAP, this.gl.KEEP);
-        this.gl.stencilOpSeparate(this.gl.FRONT, this.gl.KEEP, this.gl.DECR_WRAP, this.gl.KEEP);
 
+        // Disable color writes.
         this.gl.colorMask(false, false, false, false);
 
+        // Render to stencil buffer.
         this.renderRenderable(renderable, this.stencilPassShader);
 
-        // depth reads
+        // Disable depth reads for rendering to color buffer.
         this.gl.disable(this.gl.DEPTH_TEST);
 
-        // blend
-        this.gl.enable(this.gl.BLEND);
-        this.gl.blendFunc(this.gl.ONE, this.gl.ONE);
-
-        // culling
+        // Enable front-face culling.
         this.gl.enable(this.gl.CULL_FACE);
-        this.gl.cullFace(this.gl.FRONT);
 
-        // stencil
-        this.gl.stencilOpSeparate(this.gl.BACK, this.gl.KEEP, this.gl.KEEP, this.gl.KEEP);
-        this.gl.stencilOpSeparate(this.gl.FRONT, this.gl.KEEP, this.gl.KEEP, this.gl.KEEP);
-
+        // Disable stencil writes, set test to succeed on non-zero values.
         this.gl.stencilFunc(this.gl.NOTEQUAL, 0, 1);
+        this.gl.stencilMask(0);
 
+        // Enable color writes.
         this.gl.colorMask(true, true, true, true);
 
+        // Render to color buffer.
         this.renderRenderable(renderable);
     }
 
@@ -244,22 +237,14 @@ export default class Renderer implements SceneGraphVisitor {
 
         this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, this.gBuffer.frameBuffer);
 
-        // depth reads
-        this.gl.enable(this.gl.DEPTH_TEST);
+        this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT | this.gl.STENCIL_BUFFER_BIT);
 
-        // depth writes
-        this.gl.depthMask(true);
-
-        // blend
+        // Disable blending.
         this.gl.disable(this.gl.BLEND);
 
-        // culing
+        // Enable back-face culling.
         this.gl.enable(this.gl.CULL_FACE);
         this.gl.cullFace(this.gl.BACK);
-
-        this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
-        this.gl.clearDepth(1.0);
-        this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT | this.gl.STENCIL_BUFFER_BIT);
     }
 
     private endGPass(): void {
@@ -270,8 +255,22 @@ export default class Renderer implements SceneGraphVisitor {
         this.activeRenderQueue = RenderQueue.Lighting;
 
         this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, this.lightPassFramebuffer);
+
+        // Enable additive blending.
+        this.gl.enable(this.gl.BLEND);
+        this.gl.blendFunc(this.gl.ONE, this.gl.ONE);
+
+        // Stencil setup.
         this.gl.enable(this.gl.STENCIL_TEST);
+        this.gl.stencilOpSeparate(this.gl.BACK, this.gl.KEEP, this.gl.INCR_WRAP, this.gl.KEEP);
+        this.gl.stencilOpSeparate(this.gl.FRONT, this.gl.KEEP, this.gl.DECR_WRAP, this.gl.KEEP);
+
+        // Disable depth writes.
         this.gl.depthMask(false);
+
+        // Cull front faces instead of back to avoid issues when the camera
+        // is inside the light volume.
+        this.gl.cullFace(this.gl.FRONT);
     }
 
     private endLightPass(): void {
@@ -279,6 +278,7 @@ export default class Renderer implements SceneGraphVisitor {
         this.gl.cullFace(this.gl.BACK);
         this.gl.depthMask(true);
         this.gl.disable(this.gl.STENCIL_TEST);
+        this.gl.enable(this.gl.DEPTH_TEST);
     }
 
     private beginOverlayPass(): void {
