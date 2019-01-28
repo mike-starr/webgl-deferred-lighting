@@ -1,8 +1,8 @@
 import { vec3 } from "gl-matrix";
 
 export default interface Material {
-    diffuseColor: vec3;
-    emissiveColor: vec3;
-    specularIntensity: number;
-    specularPower: number;
+    readonly diffuseColor: vec3;
+    readonly emissiveColor: vec3;
+    readonly specularIntensity: number;
+    readonly specularPower: number;
 }

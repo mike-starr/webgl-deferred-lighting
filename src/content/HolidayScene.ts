@@ -18,6 +18,7 @@ import Renderable from "../renderer/Renderable";
 import LightIntensityAnimation from "./LightIntensityAnimation";
 import RenderQueue from "../renderer/RenderQueue";
 import TextureConstant from "../renderer/TextureConstant";
+import CameraController from "../camera/CameraController";
 
 export default class HolidayScene extends Scene {
 
@@ -77,6 +78,8 @@ export default class HolidayScene extends Scene {
         const overlayNode = this.createOverlayNode(gl);
 
         this.rootNode = new SceneGraphNode([cameraNodeMain, overlayNode]);
+
+        const cameraController = new CameraController(mainCamera, gl.canvas, vec3.fromValues(-0.6, 1.5, 2.2));
     }
 
     update(elapsedMs: number): void {
@@ -165,7 +168,6 @@ export default class HolidayScene extends Scene {
     }
 
     private makeTreeLights(gl: WebGL2RenderingContext, treeHeight: number, treeWidth: number) {
-
         const lightNodes = [];
 
         for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 4.0) {
