@@ -29,6 +29,7 @@ export default class HolidayScene extends Scene {
     private pointLightShader: ShaderProgram | null = null;
     private lightPassTextures: WebGLTexture[] = [];
     private pointLightSphere: Mesh | null = null;
+    private cameraController: CameraController | null = null;
     private lightColors: vec3[] = [];
 
     get graphRoot(): SceneGraphNode {
@@ -79,11 +80,13 @@ export default class HolidayScene extends Scene {
 
         this.rootNode = new SceneGraphNode([cameraNodeMain, overlayNode]);
 
-        const cameraController = new CameraController(mainCamera, gl.canvas, vec3.fromValues(-0.6, 1.5, 2.2));
+        this.cameraController = new CameraController(mainCamera, gl.canvas, vec3.fromValues(-0.6, 1.5, 2.2));
     }
 
     update(elapsedMs: number): void {
         super.update(elapsedMs);
+
+        (this.cameraController as CameraController).update(elapsedMs);
     }
 
     private makeRoom(gl: WebGL2RenderingContext): SceneGraphNode {

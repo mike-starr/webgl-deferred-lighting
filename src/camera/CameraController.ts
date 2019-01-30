@@ -4,15 +4,18 @@ import { quat, vec3 } from "gl-matrix";
 export default class CameraController {
 
     private readonly anglePerPixel: number = Math.PI / 400;
+    private readonly translationPerSecond: number = 1.0;
+    private readonly initialForwardVec: vec3 = vec3.fromValues(0.0, 0.0, -1.0);
+    private readonly upVec: vec3 = vec3.fromValues(0.0, 1.0, 0.0);
+
+    private keyDownSet = new Set();
     private rotationX: number = 0;
     private rotationY: number = 0;
-
     private eyePoint: vec3 = vec3.create();
-    private upVec: vec3 = vec3.fromValues(0.0, 1.0, 0.0);
-    private initialForwardVec: vec3 = vec3.fromValues(0.0, 0.0, -1.0);
 
     private lookAt: vec3 = vec3.create();
     private forwardVec: vec3 = vec3.create();
+    private rightVec: vec3 = vec3.create();
     private rotation = quat.create();
 
     constructor(private readonly camera: Camera, element: HTMLElement, initialEye: vec3) {
@@ -26,19 +29,33 @@ export default class CameraController {
         element.addEventListener("mousemove", this.onMouseMove);
         document.addEventListener("keydown", this.onKeyDown);
         document.addEventListener("keyup", this.onKeyUp);
-
-        this.update();
     }
 
-    private update() {
+    update(elapsedMs: number) {
         vec3.transformQuat(this.forwardVec, this.initialForwardVec, this.rotation);
+        vec3.cross(this.rightVec, this.forwardVec, this.upVec);
+
+        if (this.keyDownSet.has("KeyW")) {
+            vec3.scaleAndAdd(this.eyePoint, this.eyePoint, this.forwardVec, this.translationPerSecond * elapsedMs / 1000.0);
+        }
+
+        if (this.keyDownSet.has("KeyS")) {
+            vec3.scaleAndAdd(this.eyePoint, this.eyePoint, this.forwardVec, -this.translationPerSecond * elapsedMs / 1000.0);
+        }
+
+        if (this.keyDownSet.has("KeyA")) {
+            vec3.scaleAndAdd(this.eyePoint, this.eyePoint, this.rightVec, -this.translationPerSecond * elapsedMs / 1000.0);
+        }
+
+        if (this.keyDownSet.has("KeyD")) {
+            vec3.scaleAndAdd(this.eyePoint, this.eyePoint, this.rightVec, this.translationPerSecond * elapsedMs / 1000.0);
+        }
+
         vec3.add(this.lookAt, this.eyePoint, this.forwardVec);
         this.camera.setLookAt(this.eyePoint, this.lookAt, this.upVec);
     }
 
     private onMouseMove(event: MouseEvent) {
-        console.log(`mousemove: ${event.buttons}`);
-
         if (event.buttons === 1) {
             this.rotationX += -event.movementY * this.anglePerPixel;
             this.rotationY += event.movementX * this.anglePerPixel;
@@ -47,15 +64,13 @@ export default class CameraController {
             quat.rotateY(this.rotation, this.rotation, -this.rotationY);
             quat.rotateX(this.rotation, this.rotation, this.rotationX);
         }
-
-        this.update();
     }
 
     private onKeyDown(event: KeyboardEvent) {
-        console.log(`keydown ${event.key}`);
+        this.keyDownSet.add(event.code);
     }
 
     private onKeyUp(event: KeyboardEvent) {
-        console.log(`keyup ${event.key}`);
+        this.keyDownSet.delete(event.code);
     }
 }
