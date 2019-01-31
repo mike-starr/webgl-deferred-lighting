@@ -7,6 +7,7 @@ export default class CameraController {
     private readonly translationPerSecond: number = 1.0;
     private readonly initialForwardVec: vec3 = vec3.fromValues(0.0, 0.0, -1.0);
     private readonly upVec: vec3 = vec3.fromValues(0.0, 1.0, 0.0);
+    private readonly epsilon: number = 0.001;
 
     private keyDownSet = new Set();
     private rotationX: number = 0;
@@ -59,6 +60,9 @@ export default class CameraController {
         if (event.buttons === 1) {
             this.rotationX += -event.movementY * this.anglePerPixel;
             this.rotationY += event.movementX * this.anglePerPixel;
+
+            this.rotationX = Math.min(Math.PI / 2 - this.epsilon, Math.max(-Math.PI / 2 + this.epsilon, this.rotationX));
+            this.rotationY = this.rotationY % (Math.PI * 2);
 
             quat.identity(this.rotation);
             quat.rotateY(this.rotation, this.rotation, -this.rotationY);
