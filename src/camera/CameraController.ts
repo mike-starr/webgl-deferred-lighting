@@ -35,6 +35,7 @@ export default class CameraController {
     update(elapsedMs: number) {
         vec3.transformQuat(this.forwardVec, this.initialForwardVec, this.rotation);
         vec3.cross(this.rightVec, this.forwardVec, this.upVec);
+        vec3.normalize(this.rightVec, this.rightVec);
 
         if (this.keyDownSet.has("KeyW")) {
             vec3.scaleAndAdd(this.eyePoint, this.eyePoint, this.forwardVec, this.translationPerSecond * elapsedMs / 1000.0);
