@@ -1,13 +1,11 @@
 # A deferred renderer in TypeScript and WebGL 2.0
 
 ## Demos
-[Christmas Tree](https://mike-starr.github.io/webgl-experiments/examples/holiday/index.html)
+[Christmas Tree](https://mike-starr.github.io/webgl-deferred-lighting/examples/holiday/index.html)
 
-[150 Point Lights](https://mike-starr.github.io/webgl-experiments/examples/bigbang/index.html)
+[150 Point Lights](https://mike-starr.github.io/webgl-deferred-lighting/examples/bigbang/index.html)
 
-[Scaled Point Lights](https://mike-starr.github.io/webgl-experiments/examples/scaled/index.html)
-
-[Almost Art?](https://mike-starr.github.io/webgl-experiments/examples/mess/index.html)
+[Scaled Point Lights](https://mike-starr.github.io/webgl-deferred-lighting/examples/scaled/index.html)
 
 ## Why?
 Several years ago, I read a [SIGGRAPH paper](https://developer.amd.com/wordpress/media/2013/01/Chapter05-Filion-StarCraftII.pdf) detailing Stacraft 2's deferred renderer. I thought it'd be neat to implement something similar, both as an exercise in learning WebGL and a general graphics programming refresh.
@@ -67,19 +65,19 @@ fragDiffuse = vec4(uMaterial.diffuseColor.xyz, 1.0);
 fragAccumulation = vec4(uMaterial.emissiveColor.xyz, 1.0);
 ```
 
-Example g-buffer, from the [Christmas Tree](https://mike-starr.github.io/webgl-experiments/examples/holiday/index.html) demo:
+Example g-buffer, from the [Christmas Tree](https://mike-starr.github.io/webgl-deferred-lighting/examples/holiday/index.html) demo:
 
 #### Diffuse
-![Diffuse](https://mike-starr.github.io/webgl-experiments/diffuse_target.png)
+![Diffuse](https://mike-starr.github.io/webgl-deferred-lighting/diffuse_target.png)
 
 #### Position
-![Position](https://mike-starr.github.io/webgl-experiments/position_target.png)
+![Position](https://mike-starr.github.io/webgl-deferred-lighting/position_target.png)
 
 #### Normal
-![Normal](https://mike-starr.github.io/webgl-experiments/normal_target.png)
+![Normal](https://mike-starr.github.io/webgl-deferred-lighting/normal_target.png)
 
 #### Depth
-![Depth](https://mike-starr.github.io/webgl-experiments/depth_target.png)
+![Depth](https://mike-starr.github.io/webgl-deferred-lighting/depth_target.png)
 
 ### Lighting
 The lighting pass renders a bounding mesh to the accumulation target for each light in the scene (spheres for point lights, boxes for directional lights), reading from the g-buffer textures to compute lighting on each fragment. Overlapping lights blend additively.
@@ -96,10 +94,10 @@ After stenciling, the light is rendered again with the stencil function enabled 
 To illustrate the effect of the stencil optimization, in the following screenshots I've modified the light volume fragment shader to highlight all pixels where a lighting calculation occurs. The highlight moves from red to yellow as the number of overlapping lights increases.
 
 #### Without Stencil
-![NoStencil](https://mike-starr.github.io/webgl-experiments/stencil_disabled.png)
+![NoStencil](https://mike-starr.github.io/webgl-deferred-lighting/stencil_disabled.png)
 
 #### With Stencil
-![Stencil](https://mike-starr.github.io/webgl-experiments/stencil_enabled.png)
+![Stencil](https://mike-starr.github.io/webgl-deferred-lighting/stencil_enabled.png)
 
 #### Point Light Attenuation
 When creating an attenuation model for the point light volumes, I noticed that using the standard 1 / d<sup>2</sup> formula results in a long fall-off to neglible light values - meaning the point light volumes would need to be relatively large to look right.
@@ -111,7 +109,7 @@ Conventionally, for point lights, the world-space light radius is passed into th
 
 But because they can be scaled - and non-uniformly - the conventional model of passing the light radius to the shader doesn't work directly. I found it non-trivial to compute attenuation in world space using a non-uniformly scaled sphere.
 
-To work around this complication, I transform the position and normal from the g-buffer into the light volume's reference frame using its inverse world matrix, calculated on CPU. Then I do the lighting calculations as normal with an attenuation range of 1.0. There's some performance overhead (two additional mat4 by vec4 multiplications), but it allows point lights to be scaled into non-spherical shapes. The effect is illustrated in the [Scaled Point Lights](https://mike-starr.github.io/webgl-experiments/examples/scaled/index.html) demo; it's an interesting effect, but I'm unsure if it has any practical applications.
+To work around this complication, I transform the position and normal from the g-buffer into the light volume's reference frame using its inverse world matrix, calculated on CPU. Then I do the lighting calculations as normal with an attenuation range of 1.0. There's some performance overhead (two additional mat4 by vec4 multiplications), but it allows point lights to be scaled into non-spherical shapes. The effect is illustrated in the [Scaled Point Lights](https://mike-starr.github.io/webgl-deferred-lighting/examples/scaled/index.html) demo; it's an interesting effect, but I'm unsure if it has any practical applications.
 
 ### Composite
 The final pass renders the accumulation target as a full-screen quad (orthographically), then renders any 2D elements on top of that - in the examples, the g-buffer targets are rendered on the left side of the screen as textured quads.
