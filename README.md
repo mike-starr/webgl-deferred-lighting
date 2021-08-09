@@ -23,7 +23,7 @@ Because the lights are rendered as shapes and lighting calculations done only on
 ## Details
 
 ### Framework
-I created a basic rendering framework based on a scene graph, which the renderer traverses using the visitor pattern once per pass.<sup>*</sup>
+I created a basic rendering framework based on a scene graph, which the renderer traverses using the visitor pattern once per pass.
 
 When the renderer encounters a [renderable](src/renderer/Renderable.ts) element (like a mesh or light volume), it inspects the shader attached to that element and attempts to fill in all its attributes and uniforms - from either the mesh data itself or more global state (current camera, world transform, etc.).
 
@@ -124,7 +124,3 @@ Starcraft 2 Effects & Techniques, SIGGRAPH 2008: https://developer.amd.com/wordp
 Mozilla Hacks - WebGL Deferred Shading: https://hacks.mozilla.org/2014/01/webgl-deferred-shading/
 
 WebGL 2 Examples: https://github.com/tsherif/webgl2examples
-
----
-
-\* In 15 years as a software engineer, I've never seen the proper version of that pattern used. Seemed like a good time to try.
