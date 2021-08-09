@@ -1,6 +1,8 @@
 # A deferred renderer in TypeScript and WebGL 2.0
 
-## Demos (requires a browser with WebGL 2.0 support - desktop Chrome or Firefox)
+## Demos 
+Note: requires a browser with WebGL 2.0 support - desktop Chrome or Firefox.
+
 [Christmas Tree](https://mike-starr.github.io/webgl-deferred-lighting/examples/holiday/index.html)
 
 [150 Point Lights](https://mike-starr.github.io/webgl-deferred-lighting/examples/bigbang/index.html)
